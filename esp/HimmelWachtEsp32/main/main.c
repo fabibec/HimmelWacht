@@ -29,7 +29,6 @@
 
 #define MAX_INPUT_VALUE 512
 
-
 #define TAG "main"
 
 // Enter the Wi-Fi credentials here
@@ -54,9 +53,9 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Wi-Fi stack successfully initialized");
 
-        // Configure MQTT component
+    // Configure MQTT component
     mqtt_config_t mqtt_config = {
-        .broker_uri = "mqtt://172.16.3.105:1883",  // Replace with your broker IP
+        .broker_uri = "mqtt://172.16.3.105:1883",  // Broker IP
         .topic = "vehicle/turret/cmd",               // Configurable topic
         .client_id = "esp32_vehicle_01",             // Unique client ID
         .keepalive = 60,                              // Keep alive interval
@@ -72,6 +71,7 @@ void app_main(void)
         return;
     }
 
+    // I²C configuration of PCA9685
     pca9685_config_t pwm_board_cfg = {
         .device_address = 0x40,
         .freq = 50,
@@ -81,6 +81,7 @@ void app_main(void)
         .internal_pullup = true,
     };
 
+    // Platform interface configuration
     platform_config_t platform_cfg = {
         .pwm_board_config = pwm_board_cfg,
         .platform_x_channel = 2,
@@ -92,10 +93,11 @@ void app_main(void)
         .platform_y_left_stop_angle = 0,
         .platform_y_right_stop_angle = 80};
 
-    manual_control_config_t manual_control_cfg = {
+    // Configuration for vehicle control interface
+    vehicle_control_config_t manual_control_cfg = {
         .button_hold_threshold_us = 1500000, // 1.5 seconds
         .max_deg_per_sec_x = 300,
-        .max_deg_per_sec_y = 100,
+        .max_deg_per_sec_y = 150,
         .input_processing_freq_hz = 60,
         .deadzone_x = 30,
         .deadzone_y = 100,
@@ -144,8 +146,10 @@ void app_main(void)
         .pwm_duty_limit = 100,
         .mynr = 1};
 
+
     platform_init(&platform_cfg);
 
+    // Fire control config
     fire_control_config_t fire_control_cfg = {
         .gun_arm_channel = PWM_CHANNEL,  // Set the channel for the gun arm
         .flywheel_control_gpio_port = 5, // Set the GPIO port for the flywheel control
@@ -162,6 +166,6 @@ void app_main(void)
     // Initialize the DS4 controller
     ds4_init();
 
-    // Initialize manual control on core 1
+    // Initialize vehicle control on core 1
     vehicle_control_init(&manual_control_cfg, diff_drive);
 }

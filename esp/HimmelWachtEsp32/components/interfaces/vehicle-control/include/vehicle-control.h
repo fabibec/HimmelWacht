@@ -12,8 +12,8 @@ typedef struct {
     int8_t deadzone_y; // Y Deadzone for the joystick input
     int8_t core; // Core to run the control on
     int8_t deadzone_drive_update; // Deadzone for the drive update
-} manual_control_config_t;
+} vehicle_control_config_t;
 
-esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive);
+esp_err_t vehicle_control_init(vehicle_control_config_t* cfg, diff_drive_handle_t *diff_drive);
 
 #endif // _VEHICLE_CONTROL_H_

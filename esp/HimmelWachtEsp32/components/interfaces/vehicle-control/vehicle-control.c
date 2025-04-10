@@ -358,7 +358,7 @@ static inline void process_platform_up_down(){
 /**
  * @author Fabian Becker
  */
-esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
+esp_err_t vehicle_control_init(vehicle_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
     const char* TAG = "Init";
 
     // Validate the input
