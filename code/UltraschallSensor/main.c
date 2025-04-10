@@ -1,3 +1,7 @@
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/i2c-dev.h>
 
 int distMessung(){
 
@@ -12,8 +16,6 @@ int distMessung(){
 }
 
 int main(){
-
-    
 
     return 0;
 }
