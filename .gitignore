@@ -1,2 +1,3 @@
 # Ignore DS_Store files from MAC
 .DS_Store
+**/*.FCBak
