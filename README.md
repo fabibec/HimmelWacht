@@ -1,6 +1,11 @@
 # DT_G1_Himmel_Wacht_SoSe2025
 
+## Credentials
 
+Username: HW 
+Passwort: dt 
+
+ssh HW@IP_ADRESS
 
 ## Getting started
 
