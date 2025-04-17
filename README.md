@@ -48,5 +48,11 @@ cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
 
 ```
 
+For sending the stream via network (or to localhost) from the camera to a receiver you can use this command 
+
+```bash
+libcamera-vid -t 0 --width 1280 --height 720 --framerate 30 --codec h264 --inline --libav-format h264 --output - | gst-launch-1.0 fdsrc ! h264parse ! rtph264pay config-interval=1 pt=96 ! udpsink host=<ZIEL-IP> port=5000
+```
+
 Due to size limitations the images and labels for training, validation and testing is not yet in this repository. 
 
