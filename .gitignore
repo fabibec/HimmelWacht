@@ -3,9 +3,3 @@
 
 # Ignore FreeCAD Temp Files
 **/*.FCBak
-
-# Ignore ESP-IDF Source
-esp/esp-idf-v5.4.1 
-
-# Ignore Bluepad32
-esp/bluepad32-v4.2.0
