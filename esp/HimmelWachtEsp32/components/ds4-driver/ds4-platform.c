@@ -206,12 +206,10 @@ static void trigger_event_on_gamepad(uni_hid_device_t* d) {
     }
 }
 
-//
-// Entry Point
-//
+// Entry point for the platform
 struct uni_platform* get_my_platform(void) {
     static struct uni_platform plat = {
-        .name = "custom",
+        .name = "ds4-platform",
         .init = my_platform_init,
         .on_init_complete = my_platform_on_init_complete,
         .on_device_discovered = my_platform_on_device_discovered,
@@ -225,3 +223,4 @@ struct uni_platform* get_my_platform(void) {
 
     return &plat;
 }
+

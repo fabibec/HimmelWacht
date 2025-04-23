@@ -1,6 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "ds4-driver/ds4-platform.c"
+    SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES "bluepad32" "btstack"
-    # PRIV_REQUIRES
+    REQUIRES "ds4-driver"
 )
