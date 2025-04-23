@@ -15,8 +15,7 @@
 #include <uni.h>
 
 #include "include/ds4-driver.h"
-
-static volatile bd_addr_t ds4_addr = {0x00};
+#include "ds4-common.h"
 
 /**
  * @brief [Provide a brief description of the function or code block here.]
@@ -53,13 +52,36 @@ void bluepad32_task(void* arg){
 
 void ds4_init(void){
 
+
     // Create the bluepad32 task
     xTaskCreatePinnedToCore(
         bluepad32_task,   /* Function to implement the task */
         "bluepad32_task", /* Name of the task */
         8192,       /* Stack size in words */
-        NULL,       /* Task input parameter */
+        NULL,  /* Task input parameter */
         0,          /* Priority of the task */
         NULL,       /* Task handle. */
         0);  /* Core where the task should run */
+}
+
+void ds4_rumble_cb(void* context){
+    uni_hid_device_t* d;
+    ds4_rumble_context_t* ctx = (ds4_rumble_context_t*) context;
+
+    d = uni_hid_device_get_instance_for_address((uint8_t*) ds4_address);
+
+    // Safety checks in case the gamepad got disconnected while the callback was scheduled
+    if (!d) return;
+    if (!uni_bt_conn_is_connected(&d->conn)) return;
+
+    if (d->report_parser.play_dual_rumble != NULL)
+        d->report_parser.play_dual_rumble(d, ctx->start_delay_ms, ctx->duration_ms, ctx->weak_magnitude, ctx->strong_magnitude);
+}
+
+void ds4_rumble(uint16_t start_delay_ms, uint16_t duration_ms, uint8_t weak_magnitude, uint8_t strong_magnitude){
+    // TODO
+}
+
+void ds4_set_lightbar_color(uint8_t r, uint8_t g, uint8_t b){
+    // TODO
 }
