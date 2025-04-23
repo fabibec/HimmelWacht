@@ -6,9 +6,9 @@ For the DualShock4 Driver the library Bluepad32 and the BTstack Component is req
 
 1. Clone the GitHub Repo
 
-    ```shell
-    git clone --recursive https://github.com/ricardoquesada/bluepad32.git
-    ```
+    The Bluepad32 Repository is included in this project as a submodule.
+    So just clone the submodules to get it installed at the right path.
+
 2. Patch BTstack nd integrate it as a local component
 
     Patch it:
