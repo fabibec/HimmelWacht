@@ -58,3 +58,73 @@ rtph264pay config-interval=1 pt=96 ! udpsink host=<ZIEL-IP> port=5000
 
 Due to size limitations the images and labels for training, validation and testing is not yet in this repository. 
 
+## Update: 24.04.2025
+
+With the `--nopreview` flag you can suppress the rendering to the screen 
+
+```bash
+libcamera-vid --nopreview -t 0 --width 1280 --height 720 --framerate 30 --codec h264 \
+--inline --libav-format h264 --output - | gst-launch-1.0 fdsrc ! h264parse ! \
+rtph264pay config-interval=1 pt=96 ! udpsink host=<ZIEL-IP> port=5000
+```
+
+```python
+import cv2
+import subprocess
+from ultralytics import YOLO
+import torch
+from loguru import logger
+
+# GStreamer-Pipeline for receiving media stream
+pipeline = (
+    "udpsrc port=5000 ! application/x-rtp,encoding-name=H264,payload=96 ! "
+    "rtph264depay ! h264parse ! avdec_h264 ! "
+    "videoconvert ! video/x-raw,format=BGR ! "
+    "appsink drop=true sync=false"
+)
+
+model = YOLO("yolov8n_custom.pt")
+
+# Check if CUDA is available and move model to the right device
+logger.info(f"CUDA Available: {torch.cuda.is_available()}")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model.to(device)
+
+# Check OpenCV build info
+print(cv2.getBuildInformation())
+
+# Open the video stream
+cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+
+if not cap.isOpened():
+    logger.error("Failed to open video stream with GStreamer pipeline.")
+    exit()
+
+logger.info("Video stream opened successfully.")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        logger.warning("Failed to grab frame")
+        continue
+
+    # Run inference
+    results = model(frame)
+
+    # Visualize the results on the frame
+    annotated_frame = results[0].plot()  # Assumes a single image
+
+    # Display the frame
+    cv2.imshow("YOLOv8 Inference", annotated_frame)
+
+    # Break loop with 'q'
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+# Release resources
+cap.release()
+cv2.destroyAllWindows()
+```
+
+When using venv it is required to add the cv2*.so to the `/home/HW/test/venv/lib/python3.11/site-packages` path 
+
