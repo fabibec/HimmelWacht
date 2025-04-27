@@ -1,3 +1,12 @@
+/**
+ * @file
+ * @brief DualShock 4 driver for Esp32
+ *
+ * This module provides support for the DualShock 4 controller on the Esp32 platform.
+ * It utilizes the Bluepad32 library to manage Bluetooth connections and controller interactions.
+ *
+ * @author Fabian Becker
+ */
 #ifndef DS4_DRIVER_H
 #define DS4_DRIVER_H
 #include <stdint.h>
@@ -16,6 +25,7 @@ typedef struct {
     uint8_t dpad; // 0x01 = up, 0x02 = down, 0x04 = right, 0x08 = left
     uint8_t buttons; // 0x01 = cross, 0x02 = circle, 0x04 = square, 0x08 = triangle
     uint8_t triggerButtons; // 0x01 = L1, 0x02 = R1
+    uint8_t battery; // 0x00 = empty, 0xFE = full, 0xFF = unknown state
 } ds4_input_t;
 
 esp_err_t ds4_init(void);

@@ -8,8 +8,8 @@
 #include <freertos/queue.h>
 #include "ds4-common.h"
 
-/* Prototypes */
-static void signal_low_battery(uni_hid_device_t* d);
+/* Prototype */
+static void check_battery(uni_hid_device_t* d);
 
 /*
     Called just once, just after boot time, and before Bluetooth gets initialized.
@@ -64,22 +64,24 @@ static uni_error_t on_device_discovered(bd_addr_t addr, const char* name, uint16
     Called when the DualShock4 controller connects. But probably it is not ready to use.
     HID and/or other things might not have been parsed/init yet.
 
-    @param d: the device that connected
+    @param d: the device that connected (unused)
 
     @author Fabian Becker
 */
 static void on_device_connected(uni_hid_device_t* d) {
+    ARG_UNUSED(d);
     ESP_LOGI("Bluepad32 Device Connected", "Found DS4");
 }
 
 /*
     Called when the DualShock4 controller disconnects.
 
-    @param d: the device that disconnected
+    @param d: the device that disconnected (unused)
 
     @author Fabian Becker
 */
 static void on_device_disconnected(uni_hid_device_t* d) {
+    ARG_UNUSED(d);
     xEventGroupClearBitsFromISR(ds4_event_group, DS4_CONNECTED);
     ESP_LOGI("Bluepad32 Device Disconnected", "DS4 Disconnected");
 }
@@ -105,6 +107,7 @@ static uni_error_t on_device_ready(uni_hid_device_t* d) {
     }
 
     xEventGroupSetBitsFromISR(ds4_event_group, DS4_CONNECTED, NULL);
+    check_battery(d);
     return UNI_ERROR_SUCCESS;
 }
 
@@ -119,7 +122,6 @@ static uni_error_t on_device_ready(uni_hid_device_t* d) {
 static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
     static ds4_input_t current_input = {0};
     static int64_t last_input_time = 0;
-    static uint8_t battery_level = 0xFF; // 0 - 254, 255 = unknown
     static uni_gamepad_t* gp;
 
     // Limit the input processing rate to avoid flooding the event queue
@@ -142,6 +144,7 @@ static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
             current_input.dpad = gp->dpad;
             current_input.buttons = (gp->buttons & (BUTTON_CROSS_MASK | BUTTON_CIRCLE_MASK | BUTTON_SQUARE_MASK | BUTTON_TRIANGLE_MASK));
             current_input.triggerButtons = (gp->buttons & (BUTTON_R1_MASK | BUTTON_L1_MASK)) >> 4;
+            current_input.battery = ctl->battery;
 
             /*ESP_LOGI("DS4 Driver", "Input: l2 %d, r2 %d, lX %d, lY %d, rX %d, rY %d, dpad %d, triggers %d, buttons %d",
                 current_input.leftTrigger,
@@ -158,16 +161,7 @@ static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
             // Add input to event queue
             xQueueOverwriteFromISR(ds4_input_queue, &current_input, NULL);
 
-            // Read battery level, set event when battery level low (25 ~ 10% battery left)
-            if (ctl->battery < 25) {
-                if(!(battery_level & DS4_BATTERY_LOW)){
-                    xEventGroupSetBitsFromISR(ds4_event_group, DS4_BATTERY_LOW, NULL);
-                }
-                signal_low_battery(d);
-            } else if (ctl->battery >= 25 && (battery_level & DS4_BATTERY_LOW)) {
-                xEventGroupClearBitsFromISR(ds4_event_group, DS4_BATTERY_LOW);
-            }
-
+            check_battery(d);
             break;
         default:
             break;
@@ -202,30 +196,24 @@ static void on_oob_event(uni_platform_oob_event_t event, void* data) {
 }
 
 /*
-    Lets the lightbar blink read when the controller has low battery
+    Checks the battery leel of the Dualshock4 Controller and sets an event, if the level is below a defined threshold.
 
-    @param d: device to blink
+    @param d: device to check
 
     @author Fabian Becker
 */
-static void signal_low_battery(uni_hid_device_t* d) {
-    static int64_t last_input_time = 0;
-    static uint8_t red = 0xFF;
+static void check_battery(uni_hid_device_t* d) {
+    static uint8_t battery_level = 0xFF;
+    battery_level = d->controller.battery;
 
-    int64_t now = esp_timer_get_time();
-    if (now - last_input_time < low_battery_blinking_interval_us) {
-        return;
+    // Read battery level, set event when battery level low
+    if (battery_level < low_battery_threshold && !(battery_level & DS4_BATTERY_LOW)){
+        xEventGroupSetBitsFromISR(ds4_event_group, DS4_BATTERY_LOW, NULL);
+    } else if (battery_level >= low_battery_threshold && (battery_level & DS4_BATTERY_LOW)) {
+        xEventGroupClearBitsFromISR(ds4_event_group, DS4_BATTERY_LOW);
     }
-
-    if (d->report_parser.set_lightbar_color != NULL) {
-        d->report_parser.set_lightbar_color(d, red, 0x00, 0x00);
-    }
-    red = ~red;
-
-    last_input_time = now;
 }
 
-// Entry point for the platform
 struct uni_platform* get_my_platform(void) {
     static struct uni_platform plat = {
         .name = "ds4-platform",

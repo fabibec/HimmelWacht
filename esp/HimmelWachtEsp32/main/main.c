@@ -37,7 +37,7 @@ void test_ds4_input_queue(void* arg) {
     while(1){
         ds4_input_t input_data = {0};
         if (xQueueReceive(ds4_input_queue, &input_data, 0) == pdTRUE && ds4_is_connected()) {
-            ESP_LOGI("DS4 Input queue", "Input: l2 %d, r2 %d, lX %d, lY %d, rX %d, rY %d, dpad %d, buttons %d, triggerButtons %d",
+            ESP_LOGI("DS4 Input queue", "Input: l2 %d, r2 %d, lX %d, lY %d, rX %d, rY %d, dpad %d, buttons %d, triggerButtons %d, battery %d",
                 input_data.leftTrigger,
                 input_data.rightTrigger,
                 input_data.leftStickX,
@@ -46,7 +46,8 @@ void test_ds4_input_queue(void* arg) {
                 input_data.rightStickY,
                 input_data.dpad,
                 input_data.buttons,
-                input_data.triggerButtons);
+                input_data.triggerButtons,
+                input_data.battery);
         }
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }

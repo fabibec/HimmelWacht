@@ -1,12 +1,3 @@
-/**
- * @file
- * @brief DualShock 4 driver for Esp32
- *
- * This module provides support for the DualShock 4 controller on the Esp32 platform.
- * It utilizes the Bluepad32 library to manage Bluetooth connections and controller interactions.
- *
- * @author Fabian Becker
- */
 #include <freertos/FreeRTOS.h>
 #include <freertos/idf_additions.h>
 #include <freertos/task.h>
@@ -15,6 +6,7 @@
 #include <esp_mac.h>
 #include <esp_err.h>
 #include <esp_log.h>
+#include <esp_timer.h>
 #include <btstack_port_esp32.h>
 #include <btstack_run_loop.h>
 #include <btstack_stdio_esp32.h>
@@ -152,12 +144,6 @@ void ds4_output_event_task(void* arg){
                 output_event_callback_registration.context = &rumble;
 
                 btstack_run_loop_execute_on_main_thread(&output_event_callback_registration);
-                ESP_LOGI("DS4 Driver", "Rumble event: %d %d %d %d",
-                    rumble.start_delay_ms,
-                    rumble.duration_ms,
-                    rumble.weak_magnitude,
-                    rumble.strong_magnitude
-                );
                 break;
             case DS4_OUTPUT_EVENT_LIGHTBAR_COLOR:
 
@@ -175,6 +161,25 @@ void ds4_output_event_task(void* arg){
             default:
                 break;
         }
+    }
+}
+
+void ds4_low_battery_signal_task(void* arg){
+    static uint8_t red = 0xFF;
+
+    while(1){
+        // Wait until low battery
+        xEventGroupWaitBits(ds4_event_group, DS4_BATTERY_LOW, pdFALSE, pdFALSE, portMAX_DELAY);
+
+        // We only allow 1 connection at a time, so we can assume that the first device is the one we want to use
+        uni_hid_device_t* d = uni_hid_device_get_first_device_with_state(UNI_BT_CONN_STATE_DEVICE_READY);
+
+        if (d && d->report_parser.set_lightbar_color != NULL) {
+            d->report_parser.set_lightbar_color(d, red, 0x00, 0x00);
+        }
+        red = ~red;
+
+        vTaskDelay(low_battery_blinking_interval_ms / portTICK_PERIOD_MS);
     }
 }
 
@@ -239,8 +244,10 @@ esp_err_t ds4_init(void){
         return ESP_FAIL;
     }
 
+    task_created = pdFALSE;
+
     // Create the output event task
-    xTaskCreatePinnedToCore(
+    task_created = xTaskCreatePinnedToCore(
         ds4_output_event_task,   /* Function to implement the task */
         "ds4_output_event_task", /* Name of the task */
         4096,       /* Stack size in words */
@@ -250,6 +257,22 @@ esp_err_t ds4_init(void){
         0);  /* Core where the task should run */
     if(task_created != pdTRUE) {
         ESP_LOGE("DS4 Driver Init", "Failed to create output event task");
+        return ESP_FAIL;
+    }
+
+    task_created = pdFALSE;
+
+    // Create the low battery signal task
+    task_created = xTaskCreatePinnedToCore(
+        ds4_low_battery_signal_task,   /* Function to implement the task */
+        "ds4_low_battery_signal_task", /* Name of the task */
+        4096,       /* Stack size in words */
+        NULL,  /* Task input parameter */
+        1,          /* Priority of the task */
+        NULL,       /* Task handle. */
+        0);  /* Core where the task should run */
+    if(task_created != pdTRUE) {
+        ESP_LOGE("DS4 Driver Init", "Failed to create low battery signal task");
         return ESP_FAIL;
     }
 
