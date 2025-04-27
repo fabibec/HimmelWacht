@@ -24,6 +24,6 @@ esp_err_t ds4_rumble(uint16_t start_delay_ms, uint16_t duration_ms, uint8_t weak
 esp_err_t ds4_lightbar_color(uint8_t red, uint8_t green, uint8_t blue);
 
 bool ds4_is_connected(void);
-esp_err_t ds4_get_input(ds4_input_t *input_data);
+void ds4_wait_for_connection(void);
 
 #endif // DS4_DRIVER_H

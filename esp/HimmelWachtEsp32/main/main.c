@@ -7,7 +7,6 @@
 
 void test_ds4_output(void* arg) {
 
-    vTaskDelay(7000 / portTICK_PERIOD_MS);
     bool rumble = 1;
     uint8_t r = 255;
     uint8_t g = 0;
@@ -33,21 +32,23 @@ void test_ds4_output(void* arg) {
     }
 }
 
-void test_ds4_input(void* arg) {
+void test_ds4_input_queue(void* arg) {
 
     while(1){
-        ds4_input_t input_data;
-        if (ds4_is_connected() && ds4_get_input(&input_data) == ESP_OK) {
-            ESP_LOGI("DS4 Driver", "Input: l2 %d, r2 %d, lX %d, lY %d, rX %d, rY %d, dpad %d",
+        ds4_input_t input_data = {0};
+        if (xQueueReceive(ds4_input_queue, &input_data, 0) == pdTRUE && ds4_is_connected()) {
+            ESP_LOGI("DS4 Input queue", "Input: l2 %d, r2 %d, lX %d, lY %d, rX %d, rY %d, dpad %d, buttons %d, triggerButtons %d",
                 input_data.leftTrigger,
                 input_data.rightTrigger,
                 input_data.leftStickX,
                 input_data.leftStickY,
                 input_data.rightStickX,
                 input_data.rightStickY,
-                input_data.dpad);
+                input_data.dpad,
+                input_data.buttons,
+                input_data.triggerButtons);
         }
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
     }
 }
 
@@ -65,13 +66,12 @@ int app_main(void) {
         1);  /* Core where the task should run */
 
     xTaskCreatePinnedToCore(
-        test_ds4_input,   /* Function to implement the task */
-        "test_ds4_input", /* Name of the task */
+        test_ds4_input_queue,   /* Function to implement the task */
+        "test_ds4_input_queue", /* Name of the task */
         4096,       /* Stack size in words */
         NULL,  /* Task input parameter */
         1,          /* Priority of the task */
         NULL,       /* Task handle. */
         1);  /* Core where the task should run */
-
     return 0;
 }

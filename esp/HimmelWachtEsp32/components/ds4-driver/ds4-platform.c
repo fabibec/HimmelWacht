@@ -3,11 +3,13 @@
 #include <esp_timer.h>
 #include <uni.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/idf_additions.h>
+#include <freertos/event_groups.h>
 #include <freertos/queue.h>
 #include "ds4-common.h"
 
-
-// Declarations
+/* Prototypes */
+static void signal_low_battery(uni_hid_device_t* d);
 
 /*
     Called just once, just after boot time, and before Bluetooth gets initialized.
@@ -78,7 +80,7 @@ static void on_device_connected(uni_hid_device_t* d) {
     @author Fabian Becker
 */
 static void on_device_disconnected(uni_hid_device_t* d) {
-    ds4_connected = false;
+    xEventGroupClearBitsFromISR(ds4_event_group, DS4_CONNECTED);
     ESP_LOGI("Bluepad32 Device Disconnected", "DS4 Disconnected");
 }
 
@@ -102,7 +104,7 @@ static uni_error_t on_device_ready(uni_hid_device_t* d) {
         d->report_parser.set_lightbar_color(d, MANUAL_MODE_COLOR.red, MANUAL_MODE_COLOR.green, MANUAL_MODE_COLOR.blue);
     }
 
-    ds4_connected = true;
+    xEventGroupSetBitsFromISR(ds4_event_group, DS4_CONNECTED, NULL);
     return UNI_ERROR_SUCCESS;
 }
 
@@ -117,6 +119,7 @@ static uni_error_t on_device_ready(uni_hid_device_t* d) {
 static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
     static ds4_input_t current_input = {0};
     static int64_t last_input_time = 0;
+    static uint8_t battery_level = 0xFF; // 0 - 254, 255 = unknown
     static uni_gamepad_t* gp;
 
     // Limit the input processing rate to avoid flooding the event queue
@@ -140,8 +143,31 @@ static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
             current_input.buttons = (gp->buttons & (BUTTON_CROSS_MASK | BUTTON_CIRCLE_MASK | BUTTON_SQUARE_MASK | BUTTON_TRIANGLE_MASK));
             current_input.triggerButtons = (gp->buttons & (BUTTON_R1_MASK | BUTTON_L1_MASK)) >> 4;
 
+            /*ESP_LOGI("DS4 Driver", "Input: l2 %d, r2 %d, lX %d, lY %d, rX %d, rY %d, dpad %d, triggers %d, buttons %d",
+                current_input.leftTrigger,
+                current_input.rightTrigger,
+                current_input.leftStickX,
+                current_input.leftStickY,
+                current_input.rightStickX,
+                current_input.rightStickY,
+                current_input.dpad,
+                current_input.triggerButtons,
+                current_input.buttons);
+            */
+
             // Add input to event queue
             xQueueOverwriteFromISR(ds4_input_queue, &current_input, NULL);
+
+            // Read battery level, set event when battery level low (25 ~ 10% battery left)
+            if (ctl->battery < 25) {
+                if(!(battery_level & DS4_BATTERY_LOW)){
+                    xEventGroupSetBitsFromISR(ds4_event_group, DS4_BATTERY_LOW, NULL);
+                }
+                signal_low_battery(d);
+            } else if (ctl->battery >= 25 && (battery_level & DS4_BATTERY_LOW)) {
+                xEventGroupClearBitsFromISR(ds4_event_group, DS4_BATTERY_LOW);
+            }
+
             break;
         default:
             break;
@@ -173,6 +199,30 @@ static const uni_property_t* get_property(uni_property_idx_t idx) {
 static void on_oob_event(uni_platform_oob_event_t event, void* data) {
     ARG_UNUSED(event);
     ARG_UNUSED(data);
+}
+
+/*
+    Lets the lightbar blink read when the controller has low battery
+
+    @param d: device to blink
+
+    @author Fabian Becker
+*/
+static void signal_low_battery(uni_hid_device_t* d) {
+    static int64_t last_input_time = 0;
+    static uint8_t red = 0xFF;
+
+    int64_t now = esp_timer_get_time();
+    if (now - last_input_time < low_battery_blinking_interval_us) {
+        return;
+    }
+
+    if (d->report_parser.set_lightbar_color != NULL) {
+        d->report_parser.set_lightbar_color(d, red, 0x00, 0x00);
+    }
+    red = ~red;
+
+    last_input_time = now;
 }
 
 // Entry point for the platform

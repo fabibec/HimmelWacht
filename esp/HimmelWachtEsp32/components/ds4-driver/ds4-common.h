@@ -6,15 +6,25 @@
 #include <stdbool.h>
 #include "ds4-driver.h"
 
-/**/
+//Address of the DS4 Controller
 typedef uint8_t bd_addr_t[6];
 extern bd_addr_t ds4_address;
 
-extern volatile bool ds4_connected;
+// Event bit for DS4 controller connection
+#define DS4_CONNECTED (1 << 0)
+extern EventGroupHandle_t ds4_event_group;
+
+// Event bit for DS4 controller battery level
+// This is used to indicate that the battery level < 20%
+// This looks the lightbar for custom color
+#define DS4_BATTERY_LOW (1 << 1)
+extern const uint8_t low_battery_blinking_freq_hz;
+extern const uint32_t low_battery_blinking_interval_us;
 
 extern QueueHandle_t ds4_input_queue;
 
-/* Masks to access the Dualshock4 specific buttons from the general mapping */
+
+// Masks to access the Dualshock4 specific buttons from the general bluepad32 mapping
 #define DPAD_UP_MASK 0x01
 #define DPAD_DOWN_MASK 0x02
 #define DPAD_RIGHT_MASK 0x04
@@ -30,7 +40,7 @@ extern QueueHandle_t ds4_input_queue;
 
 /* Input processing rate */
 extern const uint8_t input_processing_freq_hz;
-extern const uint16_t input_processing_interval_us;
+extern const uint32_t input_processing_interval_us;
 
 extern const uint8_t output_event_queue_size;
 
