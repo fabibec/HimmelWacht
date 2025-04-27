@@ -2,6 +2,8 @@
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <uni.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include "ds4-common.h"
 
 
@@ -76,6 +78,7 @@ static void on_device_connected(uni_hid_device_t* d) {
     @author Fabian Becker
 */
 static void on_device_disconnected(uni_hid_device_t* d) {
+    ds4_connected = false;
     ESP_LOGI("Bluepad32 Device Disconnected", "DS4 Disconnected");
 }
 
@@ -99,6 +102,7 @@ static uni_error_t on_device_ready(uni_hid_device_t* d) {
         d->report_parser.set_lightbar_color(d, MANUAL_MODE_COLOR.red, MANUAL_MODE_COLOR.green, MANUAL_MODE_COLOR.blue);
     }
 
+    ds4_connected = true;
     return UNI_ERROR_SUCCESS;
 }
 
@@ -136,7 +140,8 @@ static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
             current_input.buttons = (gp->buttons & (BUTTON_CROSS_MASK | BUTTON_CIRCLE_MASK | BUTTON_SQUARE_MASK | BUTTON_TRIANGLE_MASK));
             current_input.triggerButtons = (gp->buttons & (BUTTON_R1_MASK | BUTTON_L1_MASK)) >> 4;
 
-            // TODO: Add output to event queue
+            // Add input to event queue
+            xQueueOverwriteFromISR(ds4_input_queue, &current_input, NULL);
             break;
         default:
             break;

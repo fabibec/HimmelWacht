@@ -1,10 +1,18 @@
 #ifndef _DS4_CONSTS_H_
 #define _DS4_CONSTS_H_
 #include <stdint.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <stdbool.h>
+#include "ds4-driver.h"
 
 /**/
 typedef uint8_t bd_addr_t[6];
-extern const bd_addr_t ds4_address;
+extern bd_addr_t ds4_address;
+
+extern volatile bool ds4_connected;
+
+extern QueueHandle_t ds4_input_queue;
 
 /* Masks to access the Dualshock4 specific buttons from the general mapping */
 #define DPAD_UP_MASK 0x01
@@ -24,22 +32,30 @@ extern const bd_addr_t ds4_address;
 extern const uint8_t input_processing_freq_hz;
 extern const uint16_t input_processing_interval_us;
 
-typedef struct {
-    int16_t leftTrigger, rightTrigger; // -512 to 512
-    int16_t leftStickX, leftStickY; // -512 to 512
-    int16_t rightStickX, rightStickY; // -512 to 512
-    uint8_t dpad; // 0x01 = up, 0x02 = down, 0x04 = right, 0x08 = left
-    uint8_t buttons; // 0x01 = cross, 0x02 = circle, 0x04 = square, 0x08 = triangle
-    uint8_t triggerButtons; // 0x01 = L1, 0x02 = R1
-} ds4_input_t;
+extern const uint8_t output_event_queue_size;
 
 typedef struct {
     uint16_t start_delay_ms, duration_ms;
     uint8_t weak_magnitude, strong_magnitude;
-} ds4_rumble_context_t;
+} ds4_rumble_t;
 
 typedef struct {
     uint8_t red, green, blue;
 } ds4_lightbar_color_t;
+
+typedef union {
+    ds4_rumble_t rumble;
+    ds4_lightbar_color_t lightbar;
+} ds4_output_event_params_t;
+
+typedef enum {
+    DS4_OUTPUT_EVENT_RUMBLE = 0,
+    DS4_OUTPUT_EVENT_LIGHTBAR_COLOR = 1,
+} ds4_output_event_type_t;
+
+typedef struct {
+    ds4_output_event_type_t event_type;
+    ds4_output_event_params_t event_params;
+} ds4_output_event_t;
 
 #endif // _DS4_CONSTS_H_
