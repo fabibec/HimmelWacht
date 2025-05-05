@@ -9,7 +9,7 @@
 
 static i2c_master_dev_handle_t master_dev_handle;
 static i2c_master_bus_handle_t bus_handle = NULL;
-static uint8_t i2c_timeout_ms = 100;
+static uint16_t i2c_timeout_ms = 100;
 static uint8_t i2c_buffer[5] = {0x00};
 
 /*
@@ -32,7 +32,7 @@ esp_err_t pca9685_init(uint32_t freq){
         .scl_io_num = I2C_MASTER_SCL_IO,
         .sda_io_num = I2C_MASTER_SDA_IO,
         .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true, // remove using external pullup
+        .flags.enable_internal_pullup = true // 2.4k resistors for SDA and SCL
     };
     ret = i2c_new_master_bus(&i2c_mst_config, &bus_handle);
     if(ret == ESP_FAIL){
@@ -46,7 +46,7 @@ esp_err_t pca9685_init(uint32_t freq){
         .scl_speed_hz = 100000,
     };
     ret = i2c_master_bus_add_device(bus_handle, &dev_cfg, &master_dev_handle);
-    if(ret == ESP_FAIL){
+    if(ret == ESP_ERR_INVALID_ARG || ret == ESP_ERR_NO_MEM){
         ESP_LOGI("PCA9685 Driver Init", "Unable to get I2C master device");
     }
 
@@ -55,7 +55,7 @@ esp_err_t pca9685_init(uint32_t freq){
     i2c_buffer[1] = (1 << 5); // Auto Increment
     i2c_buffer[2] = 0x01 << 2; // totem-pole output
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 3, i2c_timeout_ms);
-    if(ret == ESP_FAIL){
+    if(ret == ESP_ERR_TIMEOUT || ret == ESP_ERR_INVALID_ARG){
         ESP_LOGI("PCA9685 Driver Init", "Unable to configure PCA9685");
     }
 
@@ -65,7 +65,7 @@ esp_err_t pca9685_init(uint32_t freq){
     i2c_buffer[1] = prescale;
 
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
-    if(ret == ESP_FAIL){
+    if(ret == ESP_ERR_TIMEOUT || ret == ESP_ERR_INVALID_ARG){
         ESP_LOGI("PCA9685 Driver Init", "Unable to set PCA9685 Frequency");
     }
 

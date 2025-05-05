@@ -9,13 +9,17 @@
  *  - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/i2c.html
  *  - https://github.com/supcik/idf-pca9685
  *
+ * #TODO create servo interface for mg996r and sg90
+ * Datasheet:
+ *  - https://www.handsontec.com/dataspecs/motor_fan/MG996R.pdf
+ *
  * @author Fabian Becker
  */
 #ifndef _PCA9685_H_
 #define _PCA9685_H_
 #define I2C_MASTER_PORT_NUM 0
-#define I2C_MASTER_SDA_IO 21
-#define I2C_MASTER_SCL_IO 22
+#define I2C_MASTER_SDA_IO 18
+#define I2C_MASTER_SCL_IO 19
 #include <esp_err.h>
 #include <stdint.h>
 
