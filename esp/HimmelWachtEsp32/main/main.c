@@ -12,6 +12,7 @@ int app_main(void) {
     // Normal mg996r
     // 0.17 seconds / 60 degrees
     // Miuzei MG996R: Pulse range: 500 ~ 2500usec (0 - 180)
+    // SG90 should work the same way according to: https://www.elektronik-kompendium.de/sites/praxis/bauteil_sg90.htm
     while(1){
         pca9685_set_pwm_on_off(0, 512, 0) // 180 (right)
         vTaskDelay(500 / portTICK_PERIOD_MS);
