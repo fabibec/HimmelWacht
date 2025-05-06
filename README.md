@@ -139,4 +139,14 @@ gst-launch-1.0 rtspsrc location=rtsp://172.16.9.13:8554/libcamera latency=50 pro
 This code helps to grab the rtsp stream from the windows machine.
 
 
+The sending pipeline is: 
+
+```bash
+libcamera-vid -t 0 --width 1280 --height 720 --framerate 30 --codec yuv420 --nopreview -o - | ffmpeg -f rawvideo -pix_fmt yuv420p -s 1280x720 -r 30 -i - -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://127.0.0.1:8554/libcamera
+```
+
+The stream can be opened via rtsp://<RASPI_IP>:8554/libcamera
+
+The mediamtx can be manually started and is stored on the desktop.
+
 
