@@ -128,3 +128,15 @@ cv2.destroyAllWindows()
 
 When using venv it is required to add the cv2*.so to the `/home/HW/test/venv/lib/python3.11/site-packages` path 
 
+## Update 06.05.2025
+
+Due to restrictions in Gstreamer the stream is now published via mediamtx and can be received by ffmpeg via: 
+
+```bash
+gst-launch-1.0 rtspsrc location=rtsp://172.16.9.13:8554/libcamera latency=50 protocols=tcp ! decodebin ! autovideosink sync=false
+```
+
+This code helps to grab the rtsp stream from the windows machine.
+
+
+
