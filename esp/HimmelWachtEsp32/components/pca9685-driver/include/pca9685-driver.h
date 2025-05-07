@@ -22,8 +22,18 @@
 #define I2C_MASTER_SCL_IO 19
 #include <esp_err.h>
 #include <stdint.h>
+#include <stdbool.h>
 
-esp_err_t pca9685_init(uint32_t freq);
+typedef struct {
+    uint8_t freq;
+    uint8_t i2c_port;
+    uint8_t sda_port;
+    uint8_t scl_port;
+    uint16_t device_address;
+    bool internal_pullup;
+} pca9685_config_t;
+
+esp_err_t pca9685_init(pca9685_config_t* cfg);
 esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off);
 esp_err_t pca9685_set_pwm_duty(uint8_t channel, float duty_cycle);
 esp_err_t pca9685_set_off(uint8_t channel);

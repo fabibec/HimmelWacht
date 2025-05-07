@@ -1,6 +1,7 @@
 #include "pca9685-driver.h"
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <freertos/portmacro.h>
 #include <driver/i2c_master.h>
 #include <driver/i2c_types.h>
@@ -22,17 +23,17 @@ static uint8_t i2c_buffer[5] = {0x00};
 
     @author Fabian Becker
 */
-esp_err_t pca9685_init(uint32_t freq){
+esp_err_t pca9685_init(pca9685_config_t* cfg){
     esp_err_t ret;
 
     // I2C Master Bus Config
     i2c_master_bus_config_t i2c_mst_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
-        .i2c_port = I2C_MASTER_PORT_NUM,
-        .scl_io_num = I2C_MASTER_SCL_IO,
-        .sda_io_num = I2C_MASTER_SDA_IO,
+        .i2c_port = cfg->i2c_port,
+        .scl_io_num = cfg->scl_port,
+        .sda_io_num = cfg->sda_port,
         .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true // 2.4k resistors for SDA and SCL
+        .flags.enable_internal_pullup = cfg->internal_pullup // 2.4k resistors for SDA and SCL
     };
     ret = i2c_new_master_bus(&i2c_mst_config, &bus_handle);
     if(ret == ESP_FAIL){
@@ -42,7 +43,7 @@ esp_err_t pca9685_init(uint32_t freq){
     // I2C Master Device Config
     i2c_device_config_t dev_cfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = 0x40,
+        .device_address = cfg->device_address,
         .scl_speed_hz = 100000,
     };
     ret = i2c_master_bus_add_device(bus_handle, &dev_cfg, &master_dev_handle);
@@ -50,23 +51,41 @@ esp_err_t pca9685_init(uint32_t freq){
         ESP_LOGI("PCA9685 Driver Init", "Unable to get I2C master device");
     }
 
-    // Configure PCA9685, Auto Increment Register, totem-pole output
+    // Put PCA9685 to sleep to configure oscillator clock
     i2c_buffer[0] = 0x00;
-    i2c_buffer[1] = (1 << 5); // Auto Increment
-    i2c_buffer[2] = 0x01 << 2; // totem-pole output
-    ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 3, i2c_timeout_ms);
+    i2c_buffer[1] = (0x01 << 4); // SLEEP
+    ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
     if(ret == ESP_ERR_TIMEOUT || ret == ESP_ERR_INVALID_ARG){
-        ESP_LOGI("PCA9685 Driver Init", "Unable to configure PCA9685");
+        ESP_LOGI("PCA9685 Driver Init", "Unable to put PCA9685 into sleep");
     }
 
     // Set PCA9685 Frequency
-    uint32_t prescale = roundf(25000000.0f / (4096.0f * freq)) -1 ;
+    uint32_t prescale = roundf(25000000.0f / (4096.0f * cfg->freq)) -1;
     i2c_buffer[0] = 0xFE;
     i2c_buffer[1] = prescale;
-
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
     if(ret == ESP_ERR_TIMEOUT || ret == ESP_ERR_INVALID_ARG){
         ESP_LOGI("PCA9685 Driver Init", "Unable to set PCA9685 Frequency");
+    }
+
+    // Wake PCA9685
+    i2c_buffer[0] = 0x00;
+    i2c_buffer[1] = 0x00;
+    ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
+    if(ret == ESP_ERR_TIMEOUT || ret == ESP_ERR_INVALID_ARG){
+        ESP_LOGI("PCA9685 Driver Init", "Unable to wake PCA9685");
+    }
+
+    // Wait for oscillator
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+
+    // Configure PCA9685, Auto Increment Register, totem-pole output
+    i2c_buffer[0] = 0x00;
+    i2c_buffer[1] = (0x01 << 5); // Auto Increment
+    i2c_buffer[2] = (0x01 << 2); // totem-pole output
+    ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 3, i2c_timeout_ms);
+    if(ret == ESP_ERR_TIMEOUT || ret == ESP_ERR_INVALID_ARG){
+        ESP_LOGI("PCA9685 Driver Init", "Unable to configure PCA9685");
     }
 
     return ret;
@@ -84,8 +103,8 @@ esp_err_t pca9685_init(uint32_t freq){
     @author Fabian Becker
 */
 esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off){
-    if (on > 4095) on = 4095;
-    if (off > 4095) off = 4095;
+    if (on > 0x0FFF) on = 0x0FFF;
+    if (off > 0x0FFF) off = 0x0FFF;
     i2c_buffer[0] = 0x06 + 4 * channel; // LEDn_ON_L register address
     i2c_buffer[1] = on & 0xFF; // Low byte of ON value
     i2c_buffer[2] = on >> 8; // High byte of ON value
@@ -108,9 +127,9 @@ esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off){
 esp_err_t pca9685_set_pwm_duty(uint8_t channel, float duty_cycle){
     esp_err_t ret;
     if (duty_cycle <= 0.0f){
-        ret = pca9685_set_pwm_on_off(channel, 0, 4095);
+        ret = pca9685_set_pwm_on_off(channel, 0, 0x0FFF);
     } else if (duty_cycle >= 1.0f){
-        ret = pca9685_set_pwm_on_off(channel, 4095, 0);
+        ret = pca9685_set_pwm_on_off(channel, 0x0FFF, 0);
     } else {
         ret = pca9685_set_pwm_on_off(channel, 0, roundf(4095.0f * duty_cycle));
     }
@@ -127,7 +146,7 @@ esp_err_t pca9685_set_pwm_duty(uint8_t channel, float duty_cycle){
     @author Fabian Becker
 */
 esp_err_t pca9685_set_off(uint8_t channel){
-    return pca9685_set_pwm_on_off(channel, 0, 4095);
+    return pca9685_set_pwm_on_off(channel, 0, 0x0FFF);
 }
 
 
