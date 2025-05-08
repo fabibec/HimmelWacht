@@ -29,7 +29,37 @@ int app_main(void) {
     // 205 right
     // 105 all right
 
-    uint16_t steps[5] = {514, 409, 307, 205, 104};
+    uint16_t steps[5] = {325, 120, 325};
+
+    // Plattform x
+    // 535 left -> right for the controller  90 deg
+    // 210 ticks between -> / 90 = 2.333
+    // 325 middle
+    // 210 ticks between -> /90 = 2.333
+    // 115 right -> left for the controller -90 deg
+
+    /*
+        to get proper values turn at 2 for every degree and 3 for every third degree
+        formula (int8_t target):
+        - -> left, + -> right
+        const uint16_t zero_deg = 325;
+
+        uint8_t 3_steps = fabs(target) / 3  // cutoff wanted!
+        uint8_t 2_steps = target - 3_steps
+
+        int16_t step_amount = 2_steps * 2 + 3_steps * 3;
+        step_amount = (target > 0) ? step_amount : (step_amount * -1);
+
+        pca9685(servo_channel, 0, zero_deg + step_amount);
+    */
+
+    pca9685_set_pwm_on_off(0, 0, 325);
+    pca9685_set_pwm_on_off(2, 0, 325);
+    vTaskDelay(1000/ portTICK_PERIOD_MS);
+    pca9685_set_off(0);
+    pca9685_set_off(2);
+
+
 
     while(1){
             for(uint8_t j = 0; j <= 4; j++){
@@ -42,6 +72,13 @@ int app_main(void) {
                 }
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
+           //vTaskDelay(10000);
+            /*pca9685_set_pwm_on_off(1, 0, 320);
+           pca9685_set_pwm_on_off(2, 0, 325);
+           vTaskDelay(500 / portTICK_PERIOD_MS);
+           pca9685_set_off(1);
+           pca9685_set_off(2);
+           vTaskDelay(200000 / portTICK_PERIOD_MS);*/
     }
 
     return 0;
