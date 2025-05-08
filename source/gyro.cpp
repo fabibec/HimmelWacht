@@ -158,7 +158,7 @@ int main(){
        
        
         std::cout << "Pitch: " << angle_pitch << "°, Roll: " << angle_roll << "°" << std::endl;
-       usleep(100000); // Sleep for 100ms
+       usleep(4000); // Sleep for 4ms
 
     }
     close(file); // Close the I2C device file
