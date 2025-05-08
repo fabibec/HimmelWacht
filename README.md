@@ -2,7 +2,7 @@
 
 ## Credentials
 
-Username: HW 
+Username: hw
 
 Passwort: dt 
 
