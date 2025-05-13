@@ -17,7 +17,7 @@ static i2c_master_bus_handle_t bus_handle = NULL;
 static uint16_t i2c_timeout_ms = 100;
 static uint8_t i2c_buffer[5] = {0x00};
 
-const char *COMPONENT_TAG = "PCA9865 Driver";
+const char *PLATFORM_COMPONENT_TAG = "PCA9865 Driver";
 
 /*
     Initializes and configures the PCA9685 driver.
@@ -45,7 +45,7 @@ esp_err_t pca9685_init(pca9685_config_t* cfg){
     ret = i2c_new_master_bus(&i2c_mst_config, &bus_handle);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to get I2C master handle. Error: %s",
             TAG,
             esp_err_to_name(ret)
@@ -62,7 +62,7 @@ esp_err_t pca9685_init(pca9685_config_t* cfg){
     ret = i2c_master_bus_add_device(bus_handle, &dev_cfg, &master_dev_handle);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to get I2C master device. Error: %s",
             TAG,
             esp_err_to_name(ret)
@@ -76,7 +76,7 @@ esp_err_t pca9685_init(pca9685_config_t* cfg){
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
     if(ret != ESP_OK){
         ESP_LOGI(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to put PCA9685 into sleep. Error: %s",
             TAG,
             esp_err_to_name(ret)
@@ -91,7 +91,7 @@ esp_err_t pca9685_init(pca9685_config_t* cfg){
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to set PCA9685 Frequency. Error: %s",
             TAG,
             esp_err_to_name(ret)
@@ -104,7 +104,7 @@ esp_err_t pca9685_init(pca9685_config_t* cfg){
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 2, i2c_timeout_ms);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to wake PCA9685. Error: %s",
             TAG,
             esp_err_to_name(ret)
@@ -121,7 +121,7 @@ esp_err_t pca9685_init(pca9685_config_t* cfg){
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 3, i2c_timeout_ms);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to configure PCA9685. Error: %s",
             TAG,
             esp_err_to_name(ret)
@@ -151,7 +151,7 @@ esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off){
     // Clip values if needed
     if (channel > 0xF){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Channel value %d clipped to 0xF!",
             TAG,
             channel
@@ -160,7 +160,7 @@ esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off){
     }
     if (on > 0x0FFF){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: On value %d clipped to 0x0FFF!",
             TAG,
             on
@@ -169,7 +169,7 @@ esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off){
     }
     if (off > 0x0FFF){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Off value %d clipped to 0x0FFF!",
             TAG,
             off
@@ -187,7 +187,7 @@ esp_err_t pca9685_set_pwm_on_off(uint8_t channel, uint16_t on, uint16_t off){
     ret = i2c_master_transmit(master_dev_handle, &i2c_buffer[0], 5, i2c_timeout_ms);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable transmit PWM data. Error: %s",
             TAG,
             esp_err_to_name(ret)

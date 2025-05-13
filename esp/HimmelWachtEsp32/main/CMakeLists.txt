@@ -1,5 +1,5 @@
 idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES "ds4-driver" "pca9685-driver"
+    REQUIRES "ds4-driver" "pca9685-driver" "platform-control"
 )

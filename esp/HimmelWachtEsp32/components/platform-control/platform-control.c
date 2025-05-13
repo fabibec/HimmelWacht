@@ -13,11 +13,11 @@ static int8_t platform_y_left_stop_angle = 0;
 static int8_t platform_x_right_stop_angle = 0;
 static int8_t platform_y_right_stop_angle = 0;
 
-const uint16_t MINUS_NINETY_DEGREES = 115;
-const uint16_t ZERO_DEGREES = 325;
-const uint16_t NINETY_DEGREES = 535;
+const uint16_t MINUS_NINETY_DEGREES = 125;
+const uint16_t ZERO_DEGREES = 335;
+const uint16_t NINETY_DEGREES = 545;
 
-const char *COMPONENT_TAG = "Platform Control";
+#define PLATFORM_COMPONENT_TAG "Platform Control"
 
 esp_err_t platform_set_angle(platform_motor_channel_t channel, int8_t angle);
 
@@ -54,7 +54,7 @@ esp_err_t platform_init(platform_config_t *cfg){
     ret = platform_set_angle(platform_x_channel, platform_x_start_angle);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to set platform x to starting position",
             TAG
         );
@@ -63,7 +63,7 @@ esp_err_t platform_init(platform_config_t *cfg){
     ret = platform_set_angle(platform_y_channel, platform_y_start_angle);
     if(ret != ESP_OK){
         ESP_LOGE(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Unable to set platform y to starting position",
             TAG
         );
@@ -90,7 +90,7 @@ esp_err_t platform_x_set_angle(int8_t angle){
     // Check if the angle is in the range [left-stop,right-stop], otherwise clip value
     if(angle < platform_x_left_stop_angle){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Angle %d smaller than the left stop angle. Clipping the value.",
             TAG,
             angle
@@ -98,7 +98,7 @@ esp_err_t platform_x_set_angle(int8_t angle){
         angle = platform_x_left_stop_angle;
     } else if (angle > platform_x_right_stop_angle){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Angle %d greater than the right stop angle. Clipping the value.",
             TAG,
             angle
@@ -125,7 +125,7 @@ esp_err_t platform_y_set_angle(int8_t angle){
     // Check if the angle is in the range [left-stop,right-stop], otherwise clip value
     if(angle < platform_y_left_stop_angle){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Angle %d smaller than the left stop angle. Clipping the value.",
             TAG,
             angle
@@ -133,7 +133,7 @@ esp_err_t platform_y_set_angle(int8_t angle){
         angle = platform_y_left_stop_angle;
     } else if (angle > platform_y_right_stop_angle){
         ESP_LOGW(
-            COMPONENT_TAG,
+            PLATFORM_COMPONENT_TAG,
             "%s: Angle %d greater than the right stop angle. Clipping the value.",
             TAG,
             angle
@@ -198,7 +198,7 @@ esp_err_t platform_set_angle(platform_motor_channel_t channel, int8_t angle){
         default:
             if(angle > 90 || angle < -90){
                 ESP_LOGW(
-                    COMPONENT_TAG,
+                    PLATFORM_COMPONENT_TAG,
                     "%s: Angle %d not in range [-90,90]! Value will be clipped to closest number.",
                     TAG,
                     angle
