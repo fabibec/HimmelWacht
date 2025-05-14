@@ -4,8 +4,8 @@
 #include <esp_err.h>
 #include <esp_log.h>
 
-static platform_motor_channel_t platform_x_channel = 0;
-static platform_motor_channel_t platform_y_channel = 0;
+static uint8_t platform_x_channel = 0;
+static uint8_t platform_y_channel = 0;
 static int8_t platform_x_start_angle = 0;
 static int8_t platform_y_start_angle = 0;
 static int8_t platform_x_left_stop_angle = 0;
@@ -19,7 +19,7 @@ const uint16_t NINETY_DEGREES = 545;
 
 #define PLATFORM_COMPONENT_TAG "Platform Control"
 
-esp_err_t platform_set_angle(platform_motor_channel_t channel, int8_t angle);
+esp_err_t platform_set_angle(uint8_t channel, int8_t angle);
 
 /*
     Initializes the platform the configuring the PWM Board and turning both motors into starting position.
@@ -180,7 +180,7 @@ esp_err_t platform_y_to_start(){
 
     @author Fabian Becker
 */
-esp_err_t platform_set_angle(platform_motor_channel_t channel, int8_t angle){
+esp_err_t platform_set_angle(uint8_t channel, int8_t angle){
     uint16_t off_period = 0;
     const char* TAG = "Set angle";
 
