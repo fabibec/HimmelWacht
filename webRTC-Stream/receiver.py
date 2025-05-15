@@ -1,13 +1,28 @@
 import asyncio
 import os
-gst_root = os.getenv('GSTREAMER_1_0_ROOT_MSVC_X86_64', 'C:/Program Files/gstreamer/1.0/msvc_x86_64')
-os.add_dll_directory(gst_root+'/bin') # Alter this line to point to your GStreamer installation
+os.add_dll_directory("C:/Program Files/gstreamer/1.0/msvc_x86_64/bin")
 import cv2
 import numpy as np
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.contrib.signaling import TcpSocketSignaling
-from av import VideoFrame
+from av import VideoFrame, codec
 from datetime import datetime, timedelta
+from ultralytics import YOLO
+import torch
+import torch.version
+
+
+# Check if CUDA is available and set device to CUDA (GPU)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Using device: {device}")
+
+# Load the custom YOLOv8 model
+model = YOLO('yolov8n_custom.pt')
+model.to(device)
+model.eval()  # Set the model to evaluation mode 
+
+
+
 
 class VideoReceiver:
     def __init__(self):
@@ -20,13 +35,17 @@ class VideoReceiver:
         while True:
             try:
                 print("Waiting for frame...")
-                frame = await asyncio.wait_for(track.recv(), timeout=5.0)
+                frame = await asyncio.wait_for(track.recv(), timeout=2.0)
+                
                 frame_count += 1
                 print(f"Received frame {frame_count}")
                 
                 if isinstance(frame, VideoFrame):
                     print(f"Frame type: VideoFrame, pts: {frame.pts}, time_base: {frame.time_base}")
                     frame = frame.to_ndarray(format="rgb24")
+                    frame = np.flipud(frame)  # Convert RGB to BGR
+                    frame = np.fliplr(frame)  # Flip the frame horizontally
+
                 elif isinstance(frame, np.ndarray):
                     print(f"Frame type: numpy array")
                 else:
@@ -37,8 +56,30 @@ class VideoReceiver:
                 current_time = datetime.now()
                 new_time = current_time - timedelta( seconds=55)
                 timestamp = new_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                cv2.putText(frame, timestamp, (10, frame.shape[0] - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow("Frame", frame)
+                
+                # Run Inference on captured frame
+                results = model(frame, device=device, conf=0.25, iou=0.45, agnostic_nms=True, max_det=1000)
+
+                # Draw results on frame
+                annotated_frame = results[0].plot()
+
+                # Extract coordinates of the detected objects
+                boxes = results[0].boxes
+
+                # Print coordinates only if objects are detected
+                if boxes is not None and len(boxes) > 0:
+                    for i, box in enumerate(boxes):
+                        coords = box.xyxy[0].cpu().numpy()
+                        x1, y1, x2, y2 = coords
+                        print(f"Box {i}: x1={int(x1)}, y1={int(y1)}, x2={int(x2)}, y2={int(y2)}")
+
+
+                #cv2.putText(annotated_frame, f"FPS: NaN", (10, 30), 
+                #            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+
+                #cv2.putText(frame, timestamp, (10, frame.shape[0] - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.imshow("Frame", annotated_frame)
     
                 # Exit on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -76,6 +117,7 @@ async def run(pc, signaling):
         print(f"Connection state is {pc.connectionState}")
         if pc.connectionState == "connected":
             print("WebRTC connection established successfully")
+
         if pc.connectionState == "closed":
             print("Connection closed")
             print(pc.getStats())
@@ -108,7 +150,7 @@ async def run(pc, signaling):
     print("Closing connection")
 
 async def main():
-    signaling = TcpSocketSignaling("10.42.0.1", 9999) # IP and Port from the Sender you want to connect to
+    signaling = TcpSocketSignaling("172.16.9.13", 9999) # IP and Port from the Sender you want to connect to
     pc = RTCPeerConnection()
     
     global video_receiver
@@ -124,4 +166,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
