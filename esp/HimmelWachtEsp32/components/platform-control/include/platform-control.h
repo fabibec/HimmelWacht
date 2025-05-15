@@ -34,4 +34,11 @@ esp_err_t platform_y_set_angle(int8_t angle);
 esp_err_t platform_x_to_start();
 esp_err_t platform_y_to_start();
 
+int8_t platform_get_x_start_angle();
+int8_t platform_get_y_start_angle();
+int8_t platform_get_x_left_stop_angle();
+int8_t platform_get_y_left_stop_angle();
+int8_t platform_get_x_right_stop_angle();
+int8_t platform_get_y_right_stop_angle();
+
 #endif //_PLATFORM_CONTROL_H_

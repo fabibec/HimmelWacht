@@ -227,3 +227,69 @@ esp_err_t platform_set_angle(uint8_t channel, int8_t angle){
     // Error checking happens inside of the function
     return pca9685_set_pwm_on_off(channel, 0, off_period);
 }
+
+/*
+    Get the configured value for the left stop angle of the x motor.
+
+    @return the configured value
+
+    @author Fabian Becker
+*/
+int8_t platform_get_x_left_stop_angle(){
+    return platform_x_left_stop_angle;
+}
+
+/*
+    Get the configured value for the right stop angle of the x motor.
+
+    @return the configured value
+
+    @author Fabian Becker
+*/
+int8_t platform_get_x_right_stop_angle(){
+    return platform_x_right_stop_angle;
+}
+
+/*
+    Get the configured value for the left stop angle of the y motor.
+
+    @return the configured value
+
+    @author Fabian Becker
+*/
+int8_t platform_get_y_left_stop_angle(){
+    return platform_y_left_stop_angle;
+}
+
+/*
+    Get the configured value for the right stop angle of the y motor.
+
+    @return the configured value
+
+    @author Fabian Becker
+*/
+int8_t platform_get_y_right_stop_angle(){
+    return platform_y_right_stop_angle;
+}
+
+/*
+    Get the configured value for the starting angle of the x motor.
+
+    @return the configured value
+
+    @author Fabian Becker
+*/
+int8_t platform_get_x_start_angle(){
+    return platform_x_start_angle;
+}
+
+/*
+    Get the configured value for the starting angle of the y motor.
+
+    @return the configured value
+
+    @author Fabian Becker
+*/
+int8_t platform_get_y_start_angle(){
+    return platform_y_start_angle;
+}

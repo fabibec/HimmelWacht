@@ -8,21 +8,31 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
+#include <math.h>
 #include <esp_log.h>
 
 #define MANUAL_CONTROL_TAG "Manual Control"
 
 #define TAP_THRESHOLD_TICKS 1000
-#define MAX_SPEED 120.0f
+#define MAX_SPEED 150.0f
 #define TAP_STEP 3.0f
 #define HOLD_ACCELERATION 0.05f
+
+#define L1 0x01
+#define R1 0x02
+
+#define MAX_DEG_PER_SECOND 300.0f
+#define DT 0.016f // Assuming a 60Hz update rate
+#define ALPHA 0.f
 
 static inline void process_fire(uint16_t r2_value);
 static inline void process_platform_left_right(int8_t triggerButtons);
 static inline void process_platform_up_down(int16_t stickY);
 
-static bool r2_was_pressed = false;
-const uint16_t R2_THRESHOLD = 800;
+
+static int8_t platform_x_angle = 0;
+static int8_t platform_y_angle = 0;
+static int8_t deadzone = 30;
 
 static void manual_control_task(void* arg) {
 
@@ -35,11 +45,6 @@ static void manual_control_task(void* arg) {
         // Wait for an event from the DS4 controller
         xQueueReceive(ds4_input_queue, &ds4_current_state, portMAX_DELAY);
 
-        /*
-            TODO:
-                - L1 + R1 -> turn platform left/right
-                - rY -> turn platform up/down
-        */
         process_platform_left_right(ds4_current_state.triggerButtons);
         process_platform_up_down(ds4_current_state.rightStickY);
         process_fire(ds4_current_state.rightTrigger);
@@ -47,6 +52,8 @@ static void manual_control_task(void* arg) {
 }
 
 static inline void process_fire(uint16_t r2_value){
+    static bool r2_was_pressed = false;
+    const uint16_t R2_THRESHOLD = 800;
 
     if (r2_value > R2_THRESHOLD && !r2_was_pressed) {
         fire_control_trigger_shot();
@@ -58,30 +65,20 @@ static inline void process_fire(uint16_t r2_value){
 
 static inline void process_platform_left_right(int8_t triggerButtons){
 
-    static uint16_t l1_ticks = 0;
-    static uint16_t r1_ticks = 0;
-    static float l1_speed = 0.0f;
-    static float r1_speed = 0.0f;
-    static float delta = 0.0f;
-    const float dt = 0.016f; // Assuming a 60Hz update rate
-    static int8_t platform_x_angle = 0;
-    bool update = false;
-
-    // L1 pressed
-    if (triggerButtons & 0x01) {
+    if (triggerButtons & L1) {
         platform_x_angle += TAP_STEP;
-        if(platform_x_angle > 90){
-            platform_x_angle = 90;
+        if(platform_x_angle > platform_get_x_right_stop_angle()){
+            platform_x_angle = platform_get_x_right_stop_angle();
             ds4_rumble(0, 100, 0xF0, 0xF0);
         } else {
             platform_x_set_angle(platform_x_angle);
         }
     }
 
-    if (triggerButtons & 0x02) {
+    if (triggerButtons & R1) {
         platform_x_angle -= TAP_STEP;
-        if(platform_x_angle < -90){
-            platform_x_angle = -90;
+        if(platform_x_angle < platform_get_x_left_stop_angle()){
+            platform_x_angle = platform_get_x_left_stop_angle();
             ds4_rumble(0, 100, 0xF0, 0xF0);
         } else {
             platform_x_set_angle(platform_x_angle);
@@ -90,7 +87,25 @@ static inline void process_platform_left_right(int8_t triggerButtons){
 }
 
 static inline void process_platform_up_down(int16_t stickY){
+    if(abs(stickY) < deadzone) {
+        stickY = 0;
+    }
 
+    float normalized_stickY = (float)stickY / 512.0f;
+    //normalized_stickY = ALPHA * normalized_stickY + (1 - ALPHA) * normalized_stickY;
+
+    float speed = normalized_stickY * MAX_SPEED;
+    platform_y_angle -= speed * DT;
+
+    if(platform_y_angle < platform_get_y_left_stop_angle()){
+        platform_y_angle = platform_get_y_left_stop_angle();
+        ds4_rumble(0, 100, 0xF0, 0xF0);
+    } else if (platform_y_angle > platform_get_y_right_stop_angle()){
+        platform_y_angle = platform_get_y_right_stop_angle();
+        ds4_rumble(0, 100, 0xF0, 0xF0);
+    }
+
+    platform_y_set_angle(platform_y_angle);
 }
 
 esp_err_t manual_control_init(int8_t core) {
@@ -114,6 +129,10 @@ esp_err_t manual_control_init(int8_t core) {
         );
         return ESP_ERR_INVALID_STATE;
     }
+
+    // Set the initial angles
+    platform_x_angle = platform_get_x_start_angle();
+    platform_y_angle = platform_get_y_start_angle();
 
     // Create the task for manual control
     BaseType_t task_created = pdFALSE;
