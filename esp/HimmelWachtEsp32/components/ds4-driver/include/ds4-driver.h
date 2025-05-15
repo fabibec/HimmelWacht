@@ -5,6 +5,10 @@
  * This module provides support for the DualShock 4 controller on the Esp32 platform.
  * It utilizes the Bluepad32 library to manage Bluetooth connections and controller interactions.
  *
+ * References:
+ *  - https://github.com/ricardoquesada/bluepad32
+ *  - https://bluepad32.readthedocs.io/en/latest/
+ *
  * @author Fabian Becker
  */
 #ifndef DS4_DRIVER_H
