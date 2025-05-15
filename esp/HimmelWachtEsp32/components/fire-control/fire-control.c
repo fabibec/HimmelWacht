@@ -179,7 +179,7 @@ esp_err_t fire_control_init(fire_control_config_t *cfg) {
     if (task_created != pdTRUE) {
         ESP_LOGE(
             FIRE_CONTROL_TAG,
-            "%s: Failed to create bluepad32 task",
+            "%s: Failed to create fire control task",
             TAG
         );
         return ESP_FAIL;

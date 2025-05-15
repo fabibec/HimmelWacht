@@ -2,6 +2,9 @@
 
 #include "platform-control.h"
 #include "fire-control.h"
+#include "ds4-driver.h"
+#include "manual-control.h"
+
 #include <stdio.h>
 #include <esp_log.h>
 #include "freertos/FreeRTOS.h"
@@ -65,7 +68,7 @@ void app_main(void) {
         .platform_x_left_stop_angle = -90,
         .platform_x_right_stop_angle = 90,
         .platform_y_channel = 1,
-        .platform_y_start_angle = 47,
+        .platform_y_start_angle =  70,//47,
         .platform_y_left_stop_angle = 0,
         .platform_y_right_stop_angle = 90
     };
@@ -90,4 +93,10 @@ void app_main(void) {
         NULL,       /* Task handle. */
         0 /* Core where the task should run */
     );
+
+    // Initialize the DS4 controller
+    ds4_init();
+
+    // Initialize manual control on core 1
+    manual_control_init(1);
 }
