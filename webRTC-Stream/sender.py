@@ -1,6 +1,6 @@
 import asyncio
 import cv2
-from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
+from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack, RTCRtpSender
 from aiortc.contrib.signaling import TcpSocketSignaling
 from av import VideoFrame
 import fractions
@@ -33,9 +33,10 @@ class CustomVideoStreamTrack(VideoStreamTrack):
             await asyncio.sleep(0.1)  # Avoid CPU spin
             return await self.recv()
 
-        # Convert frame only once and create VideoFrame properly
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        video_frame = VideoFrame.from_ndarray(frame_rgb, format="rgb24")
+
+        # Flip the frame horizontally
+
+        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         
         # Use proper timing values
         pts = int(self.frame_count * 90000 / 15)  # 90kHz clock (standard for RTP)
@@ -59,6 +60,14 @@ async def setup_webrtc_and_run(ip_address, port, camera_id):
     video_sender = CustomVideoStreamTrack(camera_id)
     pc.addTrack(video_sender)
     
+    # experimental with codecs 
+    preferred_codec = "video/H264"  # or "video/VP8", "video/VP9"
+    for transceiver in pc.getTransceivers():
+        if transceiver.kind == "video":
+            codecs = [c for c in RTCRtpSender.getCapabilities("video").codecs if c.mimeType == preferred_codec]
+            if codecs:
+                transceiver.setCodecPreferences(codecs)
+
     # Create data channel for keepalive
     dc = pc.createDataChannel("keepalive")
     
@@ -77,6 +86,12 @@ async def setup_webrtc_and_run(ip_address, port, camera_id):
             print(f"Connection state is {pc.connectionState}")
             if pc.connectionState == "connected":
                 print("WebRTC connection established successfully")
+                # Print negotiated video codec
+                for transceiver in pc.getTransceivers():
+                    if transceiver.kind == "video":
+                        params = transceiver.sender.getParameters()
+                        if params.codecs:
+                            print(f"Negotiated video codec: {params.codecs[0].mimeType}")
                 # Start keepalive when connected
                 nonlocal keepalive_task
                 keepalive_task = asyncio.create_task(send_keepalive(dc))
@@ -117,9 +132,9 @@ async def send_keepalive(datachannel):
         print(f"Keepalive error: {e}")
 
 async def main():
-    ip_address = "10.42.0.1" # Ip Address of Remote Server/Machine as (the sender)
+    ip_address = "172.16.9.13" # Ip Address of Remote Server/Machine as 
     port = 9999
-    pipeline = "libcamerasrc ! queue leaky=downstream ! video/x-raw,width=640,height=480,framerate=15/1,format=NV12 ! videoconvert ! queue leaky=downstream ! video/x-raw,format=BGR ! queue max-size-buffers=4 ! appsink max-buffers=2 drop=true"    
+    pipeline = "libcamerasrc ! queue leaky=downstream ! video/x-raw,width=640,height=640,framerate=30/1,format=NV12 ! videoconvert ! queue leaky=downstream ! video/x-raw,format=BGR ! queue max-size-buffers=4 ! appsink max-buffers=2 drop=true"    
     await setup_webrtc_and_run(ip_address, port, pipeline)
 
 if __name__ == "__main__":
