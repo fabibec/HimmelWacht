@@ -19,7 +19,7 @@ const uint16_t NINETY_DEGREES = 545;
 
 #define PLATFORM_COMPONENT_TAG "Platform Control"
 
-esp_err_t platform_set_angle(uint8_t channel, int8_t angle);
+esp_err_t platform_set_angle(uint8_t channel, int8_t angle, int8_t* result);
 
 /*
     Initializes the platform the configuring the PWM Board and turning both motors into starting position.
@@ -51,7 +51,7 @@ esp_err_t platform_init(platform_config_t *cfg){
     platform_y_right_stop_angle = cfg->platform_y_right_stop_angle;
 
     // Set the platform motors to their starting positions
-    ret = platform_set_angle(platform_x_channel, platform_x_start_angle);
+    ret = platform_set_angle(platform_x_channel, platform_x_start_angle, NULL);
     if(ret != ESP_OK){
         ESP_LOGE(
             PLATFORM_COMPONENT_TAG,
@@ -60,7 +60,7 @@ esp_err_t platform_init(platform_config_t *cfg){
         );
         return ret;
     }
-    ret = platform_set_angle(platform_y_channel, platform_y_start_angle);
+    ret = platform_set_angle(platform_y_channel, platform_y_start_angle, NULL);
     if(ret != ESP_OK){
         ESP_LOGE(
             PLATFORM_COMPONENT_TAG,
@@ -77,14 +77,15 @@ esp_err_t platform_init(platform_config_t *cfg){
     Rotate x motor to a certain angle. The supplied angle will be validated w.r.t. the configured stop angles.
 
     @param angle the target position
+    @param result the actual angle that has been set
 
-    @return ESP_OK on success, ESP error code on failure
+    @return ESP_OK on success, ESP_FAIL on failure
 
     @note The speed of the motor is roughly 200ms per 60 degrees. The motor doesn't have a 1 degree precision, so for fine rotation you need to turn 2-3 degrees at once.
 
     @author Fabian Becker
 */
-esp_err_t platform_x_set_angle(int8_t angle){
+esp_err_t platform_x_set_angle(int8_t angle, int8_t* result){
     const char* TAG = "Platform X set angle:";
 
     // Check if the angle is in the range [left-stop,right-stop], otherwise clip value
@@ -105,21 +106,23 @@ esp_err_t platform_x_set_angle(int8_t angle){
         );
         angle = platform_x_right_stop_angle;
     }
-    return platform_set_angle(platform_x_channel, angle);
+
+    return platform_set_angle(platform_x_channel, angle, result);
 }
 
 /*
     Rotate y motor to a certain angle. The supplied angle will be validated w.r.t. the configured stop angles.
 
     @param angle the target position
+    @param result the actual angle that has been set
 
-    @return ESP_OK on success, ESP error code on failure
+    @return ESP_OK on success, ESP_FAIL on failure
 
     @note The speed of the motor is roughly 200ms per 60 degrees. The motor doesn't have a 1 degree precision, so for fine rotation you need to turn 2-3 degrees at once.
 
     @author Fabian Becker
 */
-esp_err_t platform_y_set_angle(int8_t angle){
+esp_err_t platform_y_set_angle(int8_t angle, int8_t* result){
     const char* TAG = "Platform Y set angle:";
 
     // Check if the angle is in the range [left-stop,right-stop], otherwise clip value
@@ -140,39 +143,46 @@ esp_err_t platform_y_set_angle(int8_t angle){
         );
         angle = platform_y_right_stop_angle;
     }
-    return platform_set_angle(platform_y_channel, angle);
+
+    return platform_set_angle(platform_y_channel, angle, result);
 }
 
 /*
     Rotate x motor to its starting position.
 
+    @param result the actual angle that has been set
+
     @return ESP_OK on success, ESP error code on failure
 
     @note The speed of the motor is roughly 200ms per 60 degrees. The motor doesn't have a 1 degree precision, so for fine rotation you need to turn 2-3 degrees at once.
 
     @author Fabian Becker
 */
-esp_err_t platform_x_to_start(){
-    return platform_set_angle(platform_x_channel, platform_x_start_angle);
+esp_err_t platform_x_to_start(int8_t* result){
+    return platform_set_angle(platform_x_channel, platform_x_start_angle, result);
 }
 
 /*
     Rotate y motor to its starting position.
 
+    @param result the actual angle that has been set
+
     @return ESP_OK on success, ESP error code on failure
 
     @note The speed of the motor is roughly 200ms per 60 degrees. The motor doesn't have a 1 degree precision, so for fine rotation you need to turn 2-3 degrees at once.
 
     @author Fabian Becker
 */
-esp_err_t platform_y_to_start(){
-    return platform_set_angle(platform_y_channel, platform_y_start_angle);
+esp_err_t platform_y_to_start(int8_t* result){
+    return platform_set_angle(platform_y_channel, platform_y_start_angle, result);
 }
 
 /*
     Private function that is used to turn degrees in to PWM cycles.
 
+    @param channel the channel on the PCA9685 board
     @param angle the target position
+    @param result the actual angle that has been set
 
     @return ESP_OK on success, ESP error code on failure
 
@@ -180,9 +190,10 @@ esp_err_t platform_y_to_start(){
 
     @author Fabian Becker
 */
-esp_err_t platform_set_angle(uint8_t channel, int8_t angle){
+esp_err_t platform_set_angle(uint8_t channel, int8_t angle, int8_t* result){
     uint16_t off_period = 0;
     const char* TAG = "Set angle";
+    if(result) *result = angle;
 
     switch (angle){
         // Use precalculated values if possible
@@ -205,8 +216,10 @@ esp_err_t platform_set_angle(uint8_t channel, int8_t angle){
                 );
                 if(angle < 0){
                     off_period = MINUS_NINETY_DEGREES;
+                    if(result) *result = -90;
                 } else {
                     off_period = NINETY_DEGREES;
+                    if(result) *result = 90;
                 }
             } else {
                 /*
@@ -226,70 +239,4 @@ esp_err_t platform_set_angle(uint8_t channel, int8_t angle){
 
     // Error checking happens inside of the function
     return pca9685_set_pwm_on_off(channel, 0, off_period);
-}
-
-/*
-    Get the configured value for the left stop angle of the x motor.
-
-    @return the configured value
-
-    @author Fabian Becker
-*/
-int8_t platform_get_x_left_stop_angle(){
-    return platform_x_left_stop_angle;
-}
-
-/*
-    Get the configured value for the right stop angle of the x motor.
-
-    @return the configured value
-
-    @author Fabian Becker
-*/
-int8_t platform_get_x_right_stop_angle(){
-    return platform_x_right_stop_angle;
-}
-
-/*
-    Get the configured value for the left stop angle of the y motor.
-
-    @return the configured value
-
-    @author Fabian Becker
-*/
-int8_t platform_get_y_left_stop_angle(){
-    return platform_y_left_stop_angle;
-}
-
-/*
-    Get the configured value for the right stop angle of the y motor.
-
-    @return the configured value
-
-    @author Fabian Becker
-*/
-int8_t platform_get_y_right_stop_angle(){
-    return platform_y_right_stop_angle;
-}
-
-/*
-    Get the configured value for the starting angle of the x motor.
-
-    @return the configured value
-
-    @author Fabian Becker
-*/
-int8_t platform_get_x_start_angle(){
-    return platform_x_start_angle;
-}
-
-/*
-    Get the configured value for the starting angle of the y motor.
-
-    @return the configured value
-
-    @author Fabian Becker
-*/
-int8_t platform_get_y_start_angle(){
-    return platform_y_start_angle;
 }

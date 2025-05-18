@@ -1,6 +1,9 @@
 # HimmelWacht Esp32 Software
 This project contains the software that runs on the Esp32. The project is also preconfigured to run in VsCode with the C/C++ Extension.
 
+## ESP IDF Installation
+The correct ESP-IDF version is included in this repository as a submodule.
+
 ## Bluepad32 Installation
 For the DualShock4 Driver the library Bluepad32 and the BTstack Component is required.
 
@@ -25,7 +28,9 @@ For the DualShock4 Driver the library Bluepad32 and the BTstack Component is req
 Now you are able to run the project
 
 
-## Version
+
+
+## Version & Dependencies
 - C11
-- ESP IDF v5.4.1, install to ../esp-idf-v5.4.1
-- Bluepad32 v4.2.0, install to ../bluepad32-v4.2.0
+- ESP IDF v5.4.1
+- Bluepad32 v4.2.0

@@ -35,6 +35,14 @@ void app_main(void) {
         .platform_y_right_stop_angle = 80
     };
 
+    manual_control_config_t manual_control_cfg = {
+        .button_hold_threshold_us = 1500000, // 1.5 seconds
+        .max_deg_per_sec = 150,
+        .input_processing_freq_hz = 60,
+        .deadzone = 30,
+        .core = 1
+    };
+
     platform_init(&platform_cfg);
     ESP_LOGI("Platform", "Platform initialized");
 
@@ -50,5 +58,5 @@ void app_main(void) {
     ds4_init();
 
     // Initialize manual control on core 1
-    manual_control_init(1);
+    manual_control_init(&manual_control_cfg);
 }
