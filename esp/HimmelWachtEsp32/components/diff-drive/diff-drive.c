@@ -18,7 +18,7 @@ typedef struct diff_drive_cmd
 // Helper function to calculate motor speeds from x, y inputs
 static void
 calculate_speeds(uint16_t x, uint16_t y, int max_input, float *left_speed, float *right_speed,
-                            motor_direction_t *left_dir, motor_direction_t *right_dir);
+                 motor_direction_t *left_dir, motor_direction_t *right_dir);
 esp_err_t create_task(diff_drive_handle_t *handle, uint8_t priority);
 static void diff_drive_task(void *pvParameters);
 
@@ -150,7 +150,7 @@ esp_err_t diff_drive_send_cmd(diff_drive_handle_t *diff_drive, input_matrix_t *m
     calculate_speeds(matrix->x, matrix->y, diff_drive->config.max_input, &cmd.left_speed, &cmd.right_speed, &cmd.left_dir, &cmd.right_dir);
 
     LOGI(TAG, "Sending command: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
-             cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
+         cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
 
     // Send command to queue
     if (xQueueSend(diff_drive->cmd_queue, &cmd, diff_drive->config.queue_timout_ms) != pdTRUE)
@@ -177,12 +177,14 @@ esp_err_t diff_drive_update(diff_drive_handle_t *diff_drive)
     esp_err_t right = ESP_OK;
 
     // Update motor drivers
-    if(motor_driver_is_update_necessary(diff_drive->left_motor)){
+    if (motor_driver_is_update_necessary(diff_drive->left_motor))
+    {
         LOGI(TAG, "Left update detected");
         left = motor_driver_update(diff_drive->left_motor);
     }
 
-    if(motor_driver_is_update_necessary(diff_drive->right_motor)){
+    if (motor_driver_is_update_necessary(diff_drive->right_motor))
+    {
         LOGI(TAG, "Right update detected");
         right = motor_driver_update(diff_drive->right_motor);
     }
@@ -243,7 +245,7 @@ static void diff_drive_task(void *pvParameters)
 
             // Log command
             LOGI(TAG, "Command received: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
-                     cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
+                 cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
         }
 
         // Update motors
@@ -270,7 +272,7 @@ esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive)
         vQueueDelete(diff_drive->cmd_queue);
     }
 
-    if( diff_drive->task_handle != NULL )
+    if (diff_drive->task_handle != NULL)
     {
         vTaskDelete(diff_drive->task_handle);
     }
@@ -287,79 +289,143 @@ esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive)
     return ESP_OK;
 }
 
-/**
- * Helper function to calculate motor speeds from x, y inputs
- *
- * x: Left/Right axis (-max_input to +max_input)
- * y: Forward/Backward axis (-max_input to +max_input)
- *
- * Converts joystick-like input to differential drive motor commands
- */
+
 static void calculate_speeds(uint16_t x, uint16_t y, int max_input, float *left_speed, float *right_speed,
-                                        motor_direction_t *left_dir, motor_direction_t *right_dir)
+                             motor_direction_t *left_dir, motor_direction_t *right_dir)
 {
-    // Constrain inputs to valid range
-    if (x > max_input)
-        x = max_input;
-    if (x < -max_input)
-        x = -max_input;
-    if (y > max_input)
-        y = max_input;
-    if (y < -max_input)
-        y = -max_input;
-
-    // Default directions
-    *left_dir = MOTOR_DIRECTION_FORWARD;
-    *right_dir = MOTOR_DIRECTION_FORWARD;
-
-    // Calculate raw speeds (can be negative)
-    float left_raw = y + x;
-    float right_raw = y - x;
-
-    // Normalize to max value if needed
-    float max_raw = max_input;
-    if (fabs(left_raw) > max_raw || fabs(right_raw) > max_raw)
-    {
-        float scaling = max_raw / fmax(fabs(left_raw), fabs(right_raw));
-        left_raw *= scaling;
-        right_raw *= scaling;
-    }
-
-    // Convert to 0-100 range and set directions
-    if (left_raw < 0)
-    {
-        *left_speed = (-left_raw * 100 / max_input);
-        *left_dir = MOTOR_DIRECTION_BACKWARD;
-    }
-    else
-    {
-        *left_speed = (left_raw * 100 / max_input);
-        *left_dir = MOTOR_DIRECTION_FORWARD;
-    }
-
-    if (right_raw < 0)
-    {
-        *right_speed = (-right_raw * 100 / max_input);
-        *right_dir = MOTOR_DIRECTION_BACKWARD;
-    }
-    else
-    {
-        *right_speed = (right_raw * 100 / max_input);
-        *right_dir = MOTOR_DIRECTION_FORWARD;
-    }
-
-    // Handle stop case
+    // check stop
     if (x == 0 && y == 0)
     {
-        *left_speed = 0;
-        *right_speed = 0;
+        *left_speed = 0.0f;
+        *right_speed = 0.0f;
         *left_dir = MOTOR_DIRECTION_STOP;
         *right_dir = MOTOR_DIRECTION_STOP;
+        return;
     }
 
-    // Log calculated speeds
-    LOGI(TAG, "Calculated speeds: left=%.2f, right=%.2f, left_dir=%d, right_dir=%d",
-             *left_speed, *right_speed, *left_dir, *right_dir);
+    // Normalize inputs to -1.0 to 1.0 range
+    float h_norm = (float)x / (float)max_input;
+    float v_norm = (float)y / (float)max_input;
+
+    // Clamp values to ensure they stay within bounds
+    if (h_norm > 1.0f)
+        h_norm = 1.0f;
+    if (h_norm < -1.0f)
+        h_norm = -1.0f;
+    if (v_norm > 1.0f)
+        v_norm = 1.0f;
+    if (v_norm < -1.0f)
+        v_norm = -1.0f;
+
+    float left = 0.0f;
+    float right = 0.0f;
+
+    // Zero or near-zero vertical input - rotate in place
+    if (fabsf(v_norm) == 0)
+    {
+        // Sharp turn mode - use opposing wheel directions
+        left = fabsf(h_norm) * 100.0f;
+        right = fabsf(h_norm) * 100.0f;
+
+        if (h_norm > 0)
+        {
+            // Turning right (clockwise)
+            *left_dir = MOTOR_DIRECTION_FORWARD;
+            *right_dir = MOTOR_DIRECTION_BACKWARD;
+        }
+        else if (h_norm < 0)
+        {
+            // Turning left (counter-clockwise)
+            *left_dir = MOTOR_DIRECTION_BACKWARD;
+            *right_dir = MOTOR_DIRECTION_FORWARD;
+        }
+        else
+        {
+            // No movement
+            *left_dir = MOTOR_DIRECTION_STOP;
+            *right_dir = MOTOR_DIRECTION_STOP;
+            left = 0.0f;
+            right = 0.0f;
+        }
+    }
+    else
+    {
+        // Set base directions according to vertical input
+        if (v_norm > 0)
+        {
+            *left_dir = MOTOR_DIRECTION_FORWARD;
+            *right_dir = MOTOR_DIRECTION_FORWARD;
+        }
+        else
+        {
+            *left_dir = MOTOR_DIRECTION_BACKWARD;
+            *right_dir = MOTOR_DIRECTION_BACKWARD;
+        }
+
+        // Get absolute value of vertical input for base speed
+        float base_speed = fabsf(v_norm);
+
+        // Apply turning factor
+        if (h_norm != 0)
+        {
+            // Calculate turn influence (0.0 to 1.0)
+            float turn_factor = fabsf(h_norm);
+
+            // Apply turn factor to appropriate wheel
+            if (h_norm > 0)
+            {
+                // Turning right - slow down right wheel
+                left = base_speed * 100.0f;
+                right = base_speed * (1.0f - turn_factor) * 100.0f;
+
+                // If sharp turn and strong horizontal input, reverse the inner wheel
+                if (turn_factor > 0.7f)
+                {
+                    right = turn_factor * 50.0f; // Scale for reasonable reverse speed
+                    if (*right_dir == MOTOR_DIRECTION_FORWARD)
+                        *right_dir = MOTOR_DIRECTION_BACKWARD;
+                    else
+                        *right_dir = MOTOR_DIRECTION_FORWARD;
+                }
+            }
+            else
+            {
+                // Turning left - slow down left wheel
+                left = base_speed * (1.0f - turn_factor) * 100.0f;
+                right = base_speed * 100.0f;
+
+                // If sharp turn and strong horizontal input, reverse the inner wheel
+                if (turn_factor > 0.7f)
+                {
+                    left = turn_factor * 50.0f; // Scale for reasonable reverse speed
+                    if (*left_dir == MOTOR_DIRECTION_FORWARD)
+                        *left_dir = MOTOR_DIRECTION_BACKWARD;
+                    else
+                        *left_dir = MOTOR_DIRECTION_FORWARD;
+                }
+            }
+        }
+        else
+        {
+            // Straight movement
+            left = base_speed * 100.0f;
+            right = base_speed * 100.0f;
+        }
+    }
+
+    // Clamp speeds to [0, 100]
+    if (left > 100.0f)
+        left = 100.0f;
+    if (left < 0.0f)
+        left = 0.0f;
+    if (right > 100.0f)
+        right = 100.0f;
+    if (right < 0.0f)
+        right = 0.0f;
+
+    // Assign output values
+    *left_speed = left;
+    *right_speed = right;
 }
 
 void diff_drive_print_all_parameters(diff_drive_handle_t *diff_drive)
@@ -375,53 +441,4 @@ void diff_drive_print_all_parameters(diff_drive_handle_t *diff_drive)
     motor_driver_print_all_parameters(diff_drive->left_motor);
     ESP_LOGI(TAG, "  Right Motor: ");
     motor_driver_print_all_parameters(diff_drive->right_motor);
-}
-
-/**
- * Convert PS4 controller inputs to PWM duty cycles for skid steering
- * 
- * @param horizontal -512 (left) to 512 (right)
- * @param vertical -512 (back) to 512 (forward)
- * @return pwm_output_t with left_duty and right_duty (0.0 to 100.0)
- *         Positive values = forward, Negative values = backward
- */
-pwm_output_t controller_to_pwm(int16_t horizontal, int16_t vertical) {
-    pwm_output_t output;
-    
-    // Normalize inputs to -1.0 to 1.0 range
-    float h_norm = (float)horizontal / 512.0f;
-    float v_norm = (float)vertical / 512.0f;
-    
-    // Clamp values to ensure they stay within bounds
-    if (h_norm > 1.0f) h_norm = 1.0f;
-    if (h_norm < -1.0f) h_norm = -1.0f;
-    if (v_norm > 1.0f) v_norm = 1.0f;
-    if (v_norm < -1.0f) v_norm = -1.0f;
-    
-    // Check for sharp turns (more than 50% stick deflection)
-    if (fabsf(h_norm) > 0.5f) {
-        // Sharp turn mode - use opposing wheel directions
-        if (h_norm > 0) {  // Turning right
-            output.left_duty = v_norm * 100.0f;
-            output.right_duty = -v_norm * 100.0f;
-        } else {  // Turning left
-            output.left_duty = -v_norm * 100.0f;
-            output.right_duty = v_norm * 100.0f;
-        }
-    } else {
-        // Gentle turn mode - use differential speeds
-        float base_speed = v_norm;
-        float turn_factor = h_norm * 0.5f;  // Scale down turn influence
-        
-        output.left_duty = (base_speed - turn_factor) * 100.0f;
-        output.right_duty = (base_speed + turn_factor) * 100.0f;
-    }
-    
-    // Clamp final values to [-100.0, 100.0]
-    if (output.left_duty > 100.0f) output.left_duty = 100.0f;
-    if (output.left_duty < -100.0f) output.left_duty = -100.0f;
-    if (output.right_duty > 100.0f) output.right_duty = 100.0f;
-    if (output.right_duty < -100.0f) output.right_duty = -100.0f;
-    
-    return output;
 }
