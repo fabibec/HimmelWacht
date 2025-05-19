@@ -20,6 +20,7 @@
 static inline void process_fire(uint16_t r2_value);
 static inline void process_platform_left_right(int16_t stickX);
 static inline void process_platform_up_down(int16_t stickY);
+static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y);
 
 static int8_t platform_x_angle = 0;
 static int8_t platform_y_angle = 0;
@@ -78,10 +79,8 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
 
 static void manual_control_task(void* arg) {
 
+    diff_drive_handle_t *diff_drive = (diff_drive_handle_t *)arg;
     static ds4_input_t ds4_current_state;
-
-    // Wait for the DS4 controller to connect
-    ds4_wait_for_connection();
 
     while(1){
         // Wait for the DS4 controller to connect
@@ -93,10 +92,30 @@ static void manual_control_task(void* arg) {
         // Reset to starting position if the button is held
         if(check_button_hold(ds4_current_state.buttons & BUTTON_CIRCLE_MASK, &platform_angle_reset_button_state)) continue;
 
-        process_platform_left_right(ds4_current_state.triggerButtons);
-        process_platform_up_down(ds4_current_state.rightStickY);
-        process_fire(ds4_current_state.rightTrigger);
+        // process_platform_left_right(ds4_current_state.triggerButtons);
+        // process_platform_up_down(ds4_current_state.rightStickY);
+        // process_fire(ds4_current_state.rightTrigger);
+        process_drive(diff_drive, ds4_current_state.leftStickX, ds4_current_state.leftStickY);
     }
+}
+
+static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
+    if(abs(x) < deadzone) {
+        x = 0;
+    } else if(abs(y) < deadzone) {
+        y = 0;
+    }
+
+    input_matrix_t matrix = {
+        .x = x,
+        .y = y};
+
+    esp_err_t ret = diff_drive_send_cmd(diff_drive, &matrix);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(MANUAL_CONTROL_TAG, "Failed to send command: %s", esp_err_to_name(ret));
+    }
+
 }
 
 static inline void process_fire(uint16_t r2_value){
@@ -191,7 +210,7 @@ static inline void process_platform_up_down(int16_t stickY){
     }
 }
 
-esp_err_t manual_control_init(manual_control_config_t* cfg) {
+esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
     const char* TAG = "Init";
 
     // Validate the input
@@ -242,7 +261,7 @@ esp_err_t manual_control_init(manual_control_config_t* cfg) {
         manual_control_task,   /* Function to implement the task */
         "manualcontrol_task", /* Name of the task */
         4096,       /* Stack size in words */
-        NULL,  /* Task input parameter */
+        diff_drive,  /* Task input parameter */
         0,          /* Priority of the task */
         NULL,       /* Task handle. */
         cfg->core /* Core where the task should run */
