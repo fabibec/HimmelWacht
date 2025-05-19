@@ -1,10 +1,10 @@
 # HimmelWacht Esp32 Software
 This project contains the software that runs on the Esp32. The project is also preconfigured to run in VsCode with the C/C++ Extension.
 
-## ds4-driver
+## ESP IDF Installation
+The correct ESP-IDF version is included in this repository as a submodule.
 
-### Installation of Bluepad32
-
+## Bluepad32 Installation
 For the DualShock4 Driver the library Bluepad32 and the BTstack Component is required.
 
 1. Clone the GitHub Repo
@@ -68,7 +68,9 @@ The following tables should explain how locked-antiphase works in detail:
 
 The current version only supports S-M. L-A will be implemented if S-M does not fit our requirements.
 
-## Version
+
+
+## Version & Dependencies
 - C11
-- ESP IDF v5.4.1, install to ../esp-idf-v5.4.1
-- Bluepad32 v4.2.0, install to ../bluepad32-v4.2.0
+- ESP IDF v5.4.1
+- Bluepad32 v4.2.0
