@@ -84,7 +84,6 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
 }
 
 static void manual_control_task(void* arg) {
-
     diff_drive_handle_t *diff_drive = (diff_drive_handle_t *)arg;
     static ds4_input_t ds4_current_state;
 
@@ -107,14 +106,13 @@ static void manual_control_task(void* arg) {
 
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
     //check if new x, y is bigger than the deadzone compared to the previous x, y
-    //keep in mind, that x and y can be negative
-    
-
-    if(abs(x) < deadzone_x) {
-        x = 0;
-    } else if(abs(y) < deadzone_y) {
-        y = 0;
+    if(abs(x - diff_drive_prev_x) < deadzone_x && abs(y - diff_drive_prev_y) < deadzone_y){
+        return;
     }
+
+    // Save the previous x, y values
+    diff_drive_prev_x = x;
+    diff_drive_prev_y = y;
 
     input_matrix_t matrix = {
         .x = x,
@@ -125,7 +123,6 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
     {
         ESP_LOGE(MANUAL_CONTROL_TAG, "Failed to send command: %s", esp_err_to_name(ret));
     }
-
 }
 
 static inline void process_fire(uint16_t r2_value){
@@ -244,7 +241,7 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
         manual_control_task,   /* Function to implement the task */
         "manualcontrol_task", /* Name of the task */
         4096,       /* Stack size in words */
-        NULL,  /* Task input parameter */
+        diff_drive,  /* Task input parameter */
         0,          /* Priority of the task */
         NULL,       /* Task handle. */
         cfg->core /* Core where the task should run */
