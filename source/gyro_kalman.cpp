@@ -10,6 +10,7 @@
 #define MPU6050_ADDR 0x68 // I2C address of the MPU6050
 #define MPU6050_REG_PWR_MGMT_1 0x6B
 #define OFFSET_SAMPLES 1000
+#define CALIBTRATION_SAMPLES 1000
 	
 float get_dt(struct timeval &prev_time)
 {
@@ -175,22 +176,29 @@ int main()
 {
     int file;
     const char *i2c_device = "/dev/i2c-1"; // I2C device file
-    uint8_t raw_data[14];
+    uint8_t MPU6050_REG_ACCEL_XOUT_H = 0x3B; // Register to read accelerometer data
+    int16_t a_x, a_y, a_z, g_x, g_y, g_z; // Raw accelerometer and gyroscope data
+    uint8_t raw_data[14]; // Buffer to store raw data (accelerator, temperature, gyroscope)
+    uint16_t accel_scaling = get_accel_scaling(file); // Get accelerometer scaling
+    uint8_t gyro_scaling = get_gyro_scaling(file); // Get gyroscope scaling
+    int16_t MPU6050_AXOFFSET = 0, MPU6050_AYOFFSET = 0, MPU6050_AZOFFSET = 0,
+            MPU6050_GXOFFSET = 0, MPU6050_GYOFFSET = 0, MPU6050_GZOFFSET = 0; // Offsets for accelerometer and gyroscope
+    float GAcX, GAcY, GAcZ; // Scaled accelerometer data
+    float calibratet_pitch = 0, calibratet_roll = 0; // Calibration values
 
+    // Open the I2C device file
     if ((file = open(i2c_device, O_RDWR)) < 0)
     {
         std::cerr << "Failed to open the i2c bus" << std::endl;
         return -1;
     }
-
+    // ensure the device is connected and functioning
     if (!perform_self_test(file))
     {
         return -1;
     }
 
-    int16_t MPU6050_AXOFFSET = 0, MPU6050_AYOFFSET = 0, MPU6050_AZOFFSET = 0,
-            MPU6050_GXOFFSET = 0, MPU6050_GYOFFSET = 0, MPU6050_GZOFFSET = 0;
-
+    // calculate offsets for accelerometer and gyroscope
     if (!get_offsets(MPU6050_AXOFFSET, MPU6050_AYOFFSET, MPU6050_AZOFFSET,
                      MPU6050_GXOFFSET, MPU6050_GYOFFSET, MPU6050_GZOFFSET, OFFSET_SAMPLES, file))
     {
@@ -201,58 +209,56 @@ int main()
 
     Kalman kalman_pitch;
     Kalman kalman_roll;
-    uint8_t MPU6050_REG_ACCEL_XOUT_H = 0x3B;
     struct timeval prev_time;
     gettimeofday(&prev_time, NULL);
-		
-    uint16_t accel_scaling = get_accel_scaling(file);
 
+    write(file, &MPU6050_REG_ACCEL_XOUT_H, 1);
+    read(file, raw_data, 14);
+    get_raw_data(a_x, a_y, a_z, g_x, g_y, g_z, raw_data);
+
+    GAcX = (float)(a_x - MPU6050_AXOFFSET) / (float)accel_scaling;
+    GAcY = (float)(a_y - MPU6050_AYOFFSET) / (float)accel_scaling;
+    GAcZ = (float)(a_z - MPU6050_AZOFFSET) / (float)accel_scaling;
+    float initial_pitch = atan2(GAcY, sqrt(GAcX * GAcX + GAcZ * GAcZ)) * (180.0 / M_PI);
+    float initial_roll  = atan2(GAcX, sqrt(GAcY * GAcY + GAcZ * GAcZ)) * (180.0 / M_PI);
 
     while (1)
     {
 
         // Read accelerometer and gyroscope data
-        
-        int16_t a_x, a_y, a_z, g_x, g_y, g_z;
 		write(file, &MPU6050_REG_ACCEL_XOUT_H, 1);
         if (read(file, raw_data, 14) != 14)
         {
             std::cerr << "Failed to read data" << std::endl;
             continue;
         }
-        /*
-        std::cout << "Raw bytes: ";
-		for (int i = 0; i < 14; ++i)
-			printf("%d ", raw_data[i]);
-		std::cout << std::endl;*/
+
         get_raw_data(a_x, a_y, a_z, g_x, g_y, g_z, raw_data);
-        //std::cout << "a_x: " << a_x << "a_y: " << a_y << "a_z: " << a_z << "g_x: " << g_x << "g_y: " << g_y << "g_z: " << g_z << std::endl;
-        /*std::cout << "Accelerometer: X: " << a_x << ", Y: " << a_y << ", Z: " << a_z << std::endl;
-        std::cout << "Gyroscope: X: " << g_x << ", Y: " << g_y << ", Z: " << g_z << std::endl;*/
-		
-		float GAcX = (float)(a_x - MPU6050_AXOFFSET) / (float)accel_scaling;
-		float GAcY = (float)(a_y - MPU6050_AYOFFSET) / (float)accel_scaling;
-		float GAcZ = (float)(a_z - MPU6050_AZOFFSET) / (float)accel_scaling;
+
+		GAcX = (float)(a_x - MPU6050_AXOFFSET) / (float)accel_scaling;
+		GAcY = (float)(a_y - MPU6050_AYOFFSET) / (float)accel_scaling;
+		GAcZ = (float)(a_z - MPU6050_AZOFFSET) / (float)accel_scaling;
 
 
+        // Convert raw accelerometer data to degrees
         float accel_pitch = atan2(GAcY, sqrt(GAcX * GAcX + GAcZ * GAcZ)) * (180.0 / M_PI);
         float accel_roll = atan2(GAcX, sqrt(GAcY * GAcY + GAcZ * GAcZ)) * (180.0 / M_PI);
-/*
-		float accel_pitch = atan2(-GAcX, sqrt(GAcY*GAcY + GAcZ*GAcZ)) * (180.0 / M_PI);
-		float accel_roll  = atan2(GAcY, GAcZ) * (180.0 / M_PI);
-*/
-        float gyroX_rate = (float)(g_x - MPU6050_GXOFFSET) / 131.0f;
-        float gyroY_rate = (float)(g_y - MPU6050_GYOFFSET) / 131.0f;
-        
-        
 
+        // Convert raw gyro data to degrees/s
+        float gyroX_rate = (float)(g_x - MPU6050_GXOFFSET) / (float)gyro_scaling;
+        float gyroY_rate = (float)(g_y - MPU6050_GYOFFSET) / (float)gyro_scaling;
+        
         float dt = get_dt(prev_time);
 
+        // apply Kalman filter
         float angle_pitch = kalman_pitch.update(accel_pitch, gyroX_rate, dt);
         float angle_roll = kalman_roll.update(accel_roll, gyroY_rate, dt);
 
-        std::cout << "Pitch: " << angle_pitch << "°, Roll: " << angle_roll << "°" << std::endl;
-        //std::cout << angle_pitch << ", " << angle_roll << std::endl;
+        // calculate the relative pitch and roll
+        float rel_pitch = angle_pitch - initial_pitch;
+        float rel_roll  = angle_roll  - initial_roll;
+
+        std::cout << "Pitch: " << rel_pitch << "°, Roll: " << rel_roll << "°" << std::endl;
         usleep(5000); // Sleep for 4ms
     }
     close(file); // Close the I2C device file
