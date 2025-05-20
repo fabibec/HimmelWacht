@@ -67,7 +67,7 @@ uint16_t get_accel_scaling(int &file)
     }
 }
 
-uint8_t get_raw_data(int16_t &a_x,int16_t &a_y,int16_t &a_z,int16_t &g_x,int16_t &g_y,int16_t &g_z, int8_t data[14])
+uint8_t get_raw_data(int16_t &a_x,int16_t &a_y,int16_t &a_z,int16_t &g_x,int16_t &g_y,int16_t &g_z, uint8_t data[14])
 {
     // Convert the data to appropriate values
     a_x = (data[0] << 8) | data[1]; // X-axis accelerometer data
@@ -138,7 +138,7 @@ uint8_t get_offsets(int16_t &MPU6050_AXOFFSET, int16_t &MPU6050_AYOFFSET, int16_
                     int16_t samples, int& file)
 {
     int16_t a_x, a_y, a_z, g_x, g_y, g_z;
-    int8_t data[14];
+    uint8_t data[14];
 	uint8_t MPU6050_REG_ACCEL_XOUT_H = 0x3B;
     // Calculate the offsets to zero the sensor
     for (int i = 0; i < samples; i++)
@@ -175,7 +175,7 @@ int main()
 {
     int file;
     const char *i2c_device = "/dev/i2c-1"; // I2C device file
-    int8_t raw_data[14];
+    uint8_t raw_data[14];
 
     if ((file = open(i2c_device, O_RDWR)) < 0)
     {
@@ -220,10 +220,11 @@ int main()
             std::cerr << "Failed to read data" << std::endl;
             continue;
         }
+        /*
         std::cout << "Raw bytes: ";
 		for (int i = 0; i < 14; ++i)
-			printf("%02X ", raw_data[i]);
-		std::cout << std::endl;
+			printf("%d ", raw_data[i]);
+		std::cout << std::endl;*/
         get_raw_data(a_x, a_y, a_z, g_x, g_y, g_z, raw_data);
         //std::cout << "a_x: " << a_x << "a_y: " << a_y << "a_z: " << a_z << "g_x: " << g_x << "g_y: " << g_y << "g_z: " << g_z << std::endl;
         /*std::cout << "Accelerometer: X: " << a_x << ", Y: " << a_y << ", Z: " << a_z << std::endl;
@@ -250,7 +251,7 @@ int main()
         float angle_pitch = kalman_pitch.update(accel_pitch, gyroX_rate, dt);
         float angle_roll = kalman_roll.update(accel_roll, gyroY_rate, dt);
 
-        // std::cout << "Pitch: " << angle_pitch << "°, Roll: " << angle_roll << "°" << std::endl;
+        std::cout << "Pitch: " << angle_pitch << "°, Roll: " << angle_roll << "°" << std::endl;
         //std::cout << angle_pitch << ", " << angle_roll << std::endl;
         usleep(5000); // Sleep for 4ms
     }
