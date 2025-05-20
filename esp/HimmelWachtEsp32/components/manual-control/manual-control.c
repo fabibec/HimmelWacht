@@ -24,10 +24,16 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
 
 static int8_t platform_x_angle = 0;
 static int8_t platform_y_angle = 0;
-static int8_t deadzone = 0;
+static int8_t deadzone_x = 0;
+static int8_t deadzone_y = 0;
 
-static _iq23 max_deg_per_sec = 0;
-static _iq23 dt = 0;
+static int16_t diff_drive_prev_x = 0;
+static int16_t diff_drive_prev_y = 0;
+
+static _iq21 max_deg_per_sec_x = 0;
+static _iq21 max_deg_per_sec_y = 0;
+
+static _iq21 dt = 0;
 
 static int64_t button_hold_threshold_us = 0;
 
@@ -100,9 +106,13 @@ static void manual_control_task(void* arg) {
 }
 
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
-    if(abs(x) < deadzone) {
+    //check if new x, y is bigger than the deadzone compared to the previous x, y
+    //keep in mind, that x and y can be negative
+    
+
+    if(abs(x) < deadzone_x) {
         x = 0;
-    } else if(abs(y) < deadzone) {
+    } else if(abs(y) < deadzone_y) {
         y = 0;
     }
 
@@ -131,38 +141,8 @@ static inline void process_fire(uint16_t r2_value){
 }
 
 static inline void process_platform_left_right(int16_t stickX){
-
-    /*
-    #define TAP_THRESHOLD_TICKS 1000
-    #define MAX_SPEED 150.0f
-    #define TAP_STEP 3.0f
-    #define HOLD_ACCELERATION 0.05f
-    #define L1 0x01
-    #define R1 0x02
-
-
-    if (triggerButtons & L1) {
-        platform_x_angle += TAP_STEP;
-        if(platform_x_angle > platform_get_x_right_stop_angle()){
-            platform_x_angle = platform_get_x_right_stop_angle();
-            ds4_rumble(0, 100, 0xF0, 0xF0);
-        } else {
-            platform_x_set_angle(platform_x_angle);
-        }
-    }
-
-    if (triggerButtons & R1) {
-        platform_x_angle -= TAP_STEP;
-        if(platform_x_angle < platform_get_x_left_stop_angle()){
-            platform_x_angle = platform_get_x_left_stop_angle();
-            ds4_rumble(0, 100, 0xF0, 0xF0);
-        } else {
-            platform_x_set_angle(platform_x_angle);
-        }
-    }*/
-
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
-    if(abs(stickX) < deadzone) {
+    if(abs(stickX) < deadzone_x) {
         stickX = 0;
     }
 
@@ -171,9 +151,9 @@ static inline void process_platform_left_right(int16_t stickX){
         (The servos max speed is > 150 degrees per second, but turning the platform to fast decreases the accuracy)
         The speed is then used to calculate the new angle of the platform.
     */
-    _iq23 normalized_stickX = _IQ21div(_IQ21(stickX), _IQ21(512)) << 2;
-    _iq23 speed = _IQ23mpy(normalized_stickX, max_deg_per_sec);
-    platform_x_angle -= _IQ23mpy(speed, dt) >> 23;
+    _iq21 normalized_stickX = _IQ21div(_IQ21(stickX), _IQ21(512));
+    _iq21 speed = _IQ21mpy(normalized_stickX, max_deg_per_sec_x);
+    platform_x_angle -= _IQ21mpy(speed, dt) >> 21;
 
     int8_t set_angle = 0;
     platform_x_set_angle(platform_x_angle, &set_angle);
@@ -183,11 +163,12 @@ static inline void process_platform_left_right(int16_t stickX){
         platform_x_angle = set_angle;
         ds4_rumble(0, 100, 0xF0, 0xF0);
     }
+
 }
 
 static inline void process_platform_up_down(int16_t stickY){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
-    if(abs(stickY) < deadzone) {
+    if(abs(stickY) < deadzone_y) {
         stickY = 0;
     }
 
@@ -196,9 +177,9 @@ static inline void process_platform_up_down(int16_t stickY){
         (The servos max speed is > 150 degrees per second, but turning the platform to fast decreases the accuracy)
         The speed is then used to calculate the new angle of the platform.
     */
-    _iq23 normalized_stickY = _IQ21div(_IQ21(stickY), _IQ21(512)) << 2;
-    _iq23 speed = _IQ23mpy(normalized_stickY, max_deg_per_sec);
-    platform_y_angle -= _IQ23mpy(speed, dt) >> 23;
+    _iq21 normalized_stickY = _IQ21div(_IQ21(stickY), _IQ21(512));
+    _iq21 speed = _IQ21mpy(normalized_stickY, max_deg_per_sec_y);
+    platform_y_angle -= _IQ21mpy(speed, dt) >> 21;
 
     int8_t set_angle = 0;
     platform_y_set_angle(platform_y_angle, &set_angle);
@@ -234,9 +215,11 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
 
     // Assign the configuration values
     button_hold_threshold_us = cfg->button_hold_threshold_us;
-    deadzone = cfg->deadzone;
-    max_deg_per_sec = _IQ23(cfg->max_deg_per_sec);
-    dt = _IQ23div(_IQ23(1), _IQ23(cfg->input_processing_freq_hz));
+    deadzone_y = cfg->deadzone_y;
+    deadzone_x = cfg->deadzone_x;
+    max_deg_per_sec_x = _IQ21(cfg->max_deg_per_sec_x);
+    max_deg_per_sec_y = _IQ21(cfg->max_deg_per_sec_y);
+    dt = _IQ21div(_IQ21(1), _IQ21(cfg->input_processing_freq_hz));
 
     platform_angle_reset_button_state.action = reset_platform_angles;
 
@@ -261,7 +244,7 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
         manual_control_task,   /* Function to implement the task */
         "manualcontrol_task", /* Name of the task */
         4096,       /* Stack size in words */
-        diff_drive,  /* Task input parameter */
+        NULL,  /* Task input parameter */
         0,          /* Priority of the task */
         NULL,       /* Task handle. */
         cfg->core /* Core where the task should run */
