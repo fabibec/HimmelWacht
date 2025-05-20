@@ -16,9 +16,8 @@ typedef struct diff_drive_cmd
 } diff_drive_cmd_t;
 
 // Helper function to calculate motor speeds from x, y inputs
-static void
-calculate_speeds(uint16_t x, uint16_t y, int max_input, float *left_speed, float *right_speed,
-                 motor_direction_t *left_dir, motor_direction_t *right_dir);
+static void calculate_speeds(int16_t x, int16_t y, int *max_input, int *left_limit, int *right_limit, float *left_speed, float *right_speed,
+                             motor_direction_t *left_dir, motor_direction_t *right_dir);
 esp_err_t create_task(diff_drive_handle_t *handle, uint8_t priority);
 static void diff_drive_task(void *pvParameters);
 
@@ -147,7 +146,7 @@ esp_err_t diff_drive_send_cmd(diff_drive_handle_t *diff_drive, input_matrix_t *m
     // Calculate motor speeds and directions based on x, y inputs
     diff_drive_cmd_t cmd;
 
-    calculate_speeds(matrix->x, matrix->y, diff_drive->config.max_input, &cmd.left_speed, &cmd.right_speed, &cmd.left_dir, &cmd.right_dir);
+    calculate_speeds(matrix->x, matrix->y, &diff_drive->config.max_input, &diff_drive->left_motor->config.pwm_duty_limit, &diff_drive->right_motor->config.pwm_duty_limit, &cmd.left_speed, &cmd.right_speed, &cmd.left_dir, &cmd.right_dir);
 
     LOGI(TAG, "Sending command: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
          cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
@@ -159,8 +158,8 @@ esp_err_t diff_drive_send_cmd(diff_drive_handle_t *diff_drive, input_matrix_t *m
         return ESP_ERR_TIMEOUT;
     }
 
-    // ESP_LOGI(TAG, "Command sent to queue: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
-    //          cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
+    LOGI(TAG, "Command sent to queue: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
+         cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
 
     return ESP_OK;
 }
@@ -289,8 +288,7 @@ esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive)
     return ESP_OK;
 }
 
-
-static void calculate_speeds(uint16_t x, uint16_t y, int max_input, float *left_speed, float *right_speed,
+static void calculate_speeds(int16_t x, int16_t y, int *max_input, int *left_limit, int *right_limit, float *left_speed, float *right_speed,
                              motor_direction_t *left_dir, motor_direction_t *right_dir)
 {
     // check stop
@@ -304,8 +302,8 @@ static void calculate_speeds(uint16_t x, uint16_t y, int max_input, float *left_
     }
 
     // Normalize inputs to -1.0 to 1.0 range
-    float h_norm = (float)x / (float)max_input;
-    float v_norm = (float)y / (float)max_input;
+    float h_norm = (float)x / (float)*max_input;
+    float v_norm = (float)y / (float)*max_input;
 
     // Clamp values to ensure they stay within bounds
     if (h_norm > 1.0f)
@@ -423,9 +421,9 @@ static void calculate_speeds(uint16_t x, uint16_t y, int max_input, float *left_
     if (right < 0.0f)
         right = 0.0f;
 
-    // Assign output values
-    *left_speed = left;
-    *right_speed = right;
+    // Scale them to 0-max_pwm
+    *left_speed = (left / 100.0f) * (float)*left_limit;
+    *right_speed = (right / 100.0f) * (float)*right_limit;
 }
 
 void diff_drive_print_all_parameters(diff_drive_handle_t *diff_drive)
