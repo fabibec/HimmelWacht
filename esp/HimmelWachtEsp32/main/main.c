@@ -13,15 +13,15 @@
 #define PWM_CHANNEL 0
 
 // Define GPIO pins for motors
-#define LEFT_MOTOR_PWM_GPIO 23
-#define LEFT_MOTOR_DIR_GPIO 22
-#define LEFT_MOTOR_FAULT_GPIO 21
-#define LEFT_MOTOR_FAULT_LED 19
+#define RIGHT_MOTOR_PWM_GPIO 23
+#define RIGHT_MOTOR_DIR_GPIO 22
+#define RIGHT_MOTOR_FAULT_GPIO 21
+#define RIGHT_MOTOR_FAULT_LED 3
 
-#define RIGHT_MOTOR_PWM_GPIO 27
-#define RIGHT_MOTOR_DIR_GPIO 26
-#define RIGHT_MOTOR_FAULT_GPIO 25
-#define RIGHT_MOTOR_FAULT_LED 32
+#define LEFT_MOTOR_PWM_GPIO 27
+#define LEFT_MOTOR_DIR_GPIO 26
+#define LEFT_MOTOR_FAULT_GPIO 25
+#define LEFT_MOTOR_FAULT_LED 32
 
 
 #define MAX_INPUT_VALUE 512
@@ -33,8 +33,8 @@ void app_main(void) {
         .max_deg_per_sec_x = 300,
         .max_deg_per_sec_y = 100,
         .input_processing_freq_hz = 60,
-        .deadzone_x = 30,
-        .deadzone_y = 100,
+        .deadzone_x = 75,
+        .deadzone_y = 75,
         .deadzone_drive_update = 10,
         .core = 1
     };
@@ -65,7 +65,7 @@ void app_main(void) {
         .ramp_rate = 5,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
         .direction_hysteresis = 5, // Adjust as needed
-        .pwm_duty_limit = 50,
+        .pwm_duty_limit = 100,
         .mynr = 0};
 
     // Right motor configuration
@@ -82,7 +82,7 @@ void app_main(void) {
         .ramp_rate = 5,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
         .direction_hysteresis = 5, // Adjust as needed
-        .pwm_duty_limit = 50,
+        .pwm_duty_limit = 100,
         .mynr = 1};
 
     // Initialize differential drive
