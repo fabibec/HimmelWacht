@@ -1,9 +1,9 @@
 #include "kalman.h"
 Kalman::Kalman()
 {
-    Q_angle = 0.003f;  // Increased slightly
-    Q_bias = 0.003f;
-    R_measure = 0.05f; // Increased slightly to make the filter trust the accelerometer more
+    Q_angle = 0.0001f;  
+    Q_bias = 0.0003f;
+    R_measure = 0.0001f; 
     
     angle = 0.0f;
     bias = 0.0f;
