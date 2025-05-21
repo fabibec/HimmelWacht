@@ -9,6 +9,8 @@
 #include "manual-control.h"
 #include "motor-driver.h"
 #include "diff-drive.h"
+#include "platform-control.h"
+#include "fire-control.h"
 
 #define PWM_CHANNEL 0
 
@@ -23,21 +25,39 @@
 #define LEFT_MOTOR_FAULT_GPIO 25
 #define LEFT_MOTOR_FAULT_LED 32
 
-
 #define MAX_INPUT_VALUE 512
 
+void app_main(void)
+{
+    pca9685_config_t pwm_board_cfg = {
+        .device_address = 0x40,
+        .freq = 50,
+        .i2c_port = 0,
+        .sda_port = 18,
+        .scl_port = 19,
+        .internal_pullup = true,
+    };
 
-void app_main(void) {
+    platform_config_t platform_cfg = {
+        .pwm_board_config = pwm_board_cfg,
+        .platform_x_channel = 2,
+        .platform_x_start_angle = 0,
+        .platform_x_left_stop_angle = -90,
+        .platform_x_right_stop_angle = 90,
+        .platform_y_channel = 1,
+        .platform_y_start_angle = 47,
+        .platform_y_left_stop_angle = 0,
+        .platform_y_right_stop_angle = 80};
+
     manual_control_config_t manual_control_cfg = {
         .button_hold_threshold_us = 1500000, // 1.5 seconds
         .max_deg_per_sec_x = 300,
         .max_deg_per_sec_y = 100,
         .input_processing_freq_hz = 60,
-        .deadzone_x = 75,
-        .deadzone_y = 75,
+        .deadzone_x = 30,
+        .deadzone_y = 100,
         .deadzone_drive_update = 10,
-        .core = 1
-    };
+        .core = 1};
 
     // Differential drive configuration
     diff_drive_config_t diff_drive_config = {
@@ -85,6 +105,17 @@ void app_main(void) {
         .pwm_duty_limit = 100,
         .mynr = 1};
 
+    platform_init(&platform_cfg);
+    ESP_LOGI("Platform", "Platform initialized");
+
+    fire_control_config_t fire_control_cfg = {
+        .gun_arm_channel = PWM_CHANNEL,  // Set the channel for the gun arm
+        .flywheel_control_gpio_port = 5, // Set the GPIO port for the flywheel control
+        .run_on_core = 1                 // Set the core to run on
+    };
+
+    fire_control_init(&fire_control_cfg);
+
     // Initialize differential drive
     diff_drive_handle_t *diff_drive = diff_drive_init(&diff_drive_config,
                                                       &left_motor_config,
@@ -96,10 +127,9 @@ void app_main(void) {
     // Initialize manual control on core 1
     manual_control_init(&manual_control_cfg, diff_drive);
 
-        // Main task can do other work or just wait
+    // Main task can do other work or just wait
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-
 }

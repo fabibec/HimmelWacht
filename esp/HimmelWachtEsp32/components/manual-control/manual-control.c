@@ -97,9 +97,9 @@ static void manual_control_task(void* arg) {
         // Reset to starting position if the button is held
         if(check_button_hold(ds4_current_state.buttons & BUTTON_CIRCLE_MASK, &platform_angle_reset_button_state)) continue;
 
-        // process_platform_left_right(ds4_current_state.triggerButtons);
-        // process_platform_up_down(ds4_current_state.rightStickY);
-        // process_fire(ds4_current_state.rightTrigger);
+        process_platform_left_right(ds4_current_state.rightStickX);
+        process_platform_up_down(ds4_current_state.rightStickY);
+        process_fire(ds4_current_state.rightTrigger);
         process_drive(diff_drive, ds4_current_state.leftStickX, ds4_current_state.leftStickY * (-1));
     }
 }
@@ -107,7 +107,7 @@ static void manual_control_task(void* arg) {
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
     ESP_LOGI(MANUAL_CONTROL_TAG, "x: %d, y: %d", x, y);
     //check if new x, y is bigger than the deadzone compared to the previous x, y
-    if(abs(x - diff_drive_prev_x) < deadzone_x && abs(y - diff_drive_prev_y) < deadzone_y){
+    if(abs(x - diff_drive_prev_x) < 75 && abs(y - diff_drive_prev_y) < 75){
         return;
     }
 
