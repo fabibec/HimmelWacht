@@ -16,7 +16,7 @@ typedef struct diff_drive_cmd
 } diff_drive_cmd_t;
 
 // Helper function to calculate motor speeds from x, y inputs
-static void calculate_speeds(int16_t x, int16_t y, int *max_input, int *left_limit, int *right_limit, float *left_speed, float *right_speed,
+static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *left_limit, float *right_limit, float *left_speed, float *right_speed,
                              motor_direction_t *left_dir, motor_direction_t *right_dir);
 esp_err_t create_task(diff_drive_handle_t *handle, uint8_t priority);
 static void diff_drive_task(void *pvParameters);
@@ -243,7 +243,7 @@ static void diff_drive_task(void *pvParameters)
             motor_driver_set_speed(drive->right_motor, cmd.right_speed, cmd.right_dir);
 
             // Log command
-            LOGI(TAG, "Command received: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
+            ESP_LOGI(TAG, "Command received: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
                  cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
         }
 
@@ -288,7 +288,7 @@ esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive)
     return ESP_OK;
 }
 
-static void calculate_speeds(int16_t x, int16_t y, int *max_input, int *left_limit, int *right_limit, float *left_speed, float *right_speed,
+static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *left_limit, float *right_limit, float *left_speed, float *right_speed,
                              motor_direction_t *left_dir, motor_direction_t *right_dir)
 {
     // check stop
@@ -317,6 +317,18 @@ static void calculate_speeds(int16_t x, int16_t y, int *max_input, int *left_lim
 
     float left = 0.0f;
     float right = 0.0f;
+
+    //handle straight forward and backward movement
+    if(fabsf(h_norm) < 0.20f)
+    {
+        h_norm = 0.0f;
+    }
+    //handle straight left and right movement for in place rotation
+    if(fabsf(v_norm) < 0.20f)
+    {
+        v_norm = 0.0f;
+    }
+
 
     // Zero or near-zero vertical input - rotate in place
     if (fabsf(v_norm) == 0)
@@ -422,8 +434,8 @@ static void calculate_speeds(int16_t x, int16_t y, int *max_input, int *left_lim
         right = 0.0f;
 
     // Scale them to 0-max_pwm
-    *left_speed = (left / 100.0f) * (float)*left_limit;
-    *right_speed = (right / 100.0f) * (float)*right_limit;
+    *left_speed = (left / 100.0f) * *left_limit;
+    *right_speed = (right / 100.0f) * *right_limit;
 }
 
 void diff_drive_print_all_parameters(diff_drive_handle_t *diff_drive)

@@ -23,7 +23,7 @@ typedef struct input_matrix
  */
 typedef struct
 {
-    uint16_t max_input;                 // Maximum input value (e.g., 512)
+    int16_t max_input;                 // Maximum input value (e.g., 512)
     uint32_t cmd_queue_size;      // Size of command queue
     uint32_t recovery_time_ms; // Recovery time in milliseconds
     uint8_t task_priority;         // Task priority
