@@ -10,6 +10,12 @@ from datetime import datetime, timedelta
 from ultralytics import YOLO
 import torch
 import torch.version
+import paho.mqtt.client as mqtt
+
+
+# MQTT-Client for publishing to MQTT-Broker
+client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+client.connect("127.0.0.1", 1883, 60)
 
 
 # Check if CUDA is available and set device to CUDA (GPU)
@@ -34,14 +40,15 @@ class VideoReceiver:
         frame_count = 0
         while True:
             try:
-                print("Waiting for frame...")
                 frame = await asyncio.wait_for(track.recv(), timeout=2.0)
                 
-                frame_count += 1
-                print(f"Received frame {frame_count}")
+
+                # ---------------------- Debugging Comment ------------------------------------------
+                #frame_count += 1
+                #print(f"Received frame {frame_count}")
                 
                 if isinstance(frame, VideoFrame):
-                    print(f"Frame type: VideoFrame, pts: {frame.pts}, time_base: {frame.time_base}")
+                    #print(f"Frame type: VideoFrame, pts: {frame.pts}, time_base: {frame.time_base}") -- Debugging Comment
                     frame = frame.to_ndarray(format="rgb24")
                     frame = np.flipud(frame)  # Convert RGB to BGR
                     frame = np.fliplr(frame)  # Flip the frame horizontally
@@ -57,11 +64,27 @@ class VideoReceiver:
                 new_time = current_time - timedelta( seconds=55)
                 timestamp = new_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
                 
-                # Run Inference on captured frame
-                results = model(frame, device=device, conf=0.25, iou=0.45, agnostic_nms=True, max_det=1000)
+                #Run regular Inference on captured frame
+                results = model(frame, device=device, conf=0.85, iou=0.45, agnostic_nms=True, max_det=1000)
 
+
+                # Run Inference with explicit tracking algorithm
+                # Result => Adds lot of latency due to CPU-heavy tracking algorithm 
+                # Therefore model.track is not usable for real-time 
+                # Falling back to regular inference frame-by-frame
+                #results = model.track(frame,stream=False, persist=True, conf=0.9, verbose=True, device=device, iou=0.45) 
+                #for res in results:
+                #    
+                #    annotated_frame = res.plot()
+                #    cv2.imshow("Tracker", annotated_frame)
+                #    if cv2.waitKey(1) & 0xFF == ord('q'):
+                #        break
+
+                
                 # Draw results on frame
                 annotated_frame = results[0].plot()
+                img = cv2.circle(annotated_frame,(320,320), 5, (0,0,255), 3)
+
 
                 # Extract coordinates of the detected objects
                 boxes = results[0].boxes
@@ -71,15 +94,21 @@ class VideoReceiver:
                     for i, box in enumerate(boxes):
                         coords = box.xyxy[0].cpu().numpy()
                         x1, y1, x2, y2 = coords
+                        x1 = int(x1)
+                        y1 = int(y1)
+                        x2 = int(x2)
+                        y2 = int(y2)
+
+                        center_x = (x1 + x2) / 2
+                        center_y = (y1 + y2) / 2
+                        center = [center_x, center_y]
+                        
+                        message = f"{center}"
+                        client.publish("coordinates", message)
                         print(f"Box {i}: x1={int(x1)}, y1={int(y1)}, x2={int(x2)}, y2={int(y2)}")
 
 
-                #cv2.putText(annotated_frame, f"FPS: NaN", (10, 30), 
-                #            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-
-                #cv2.putText(frame, timestamp, (10, frame.shape[0] - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-                cv2.imshow("Frame", annotated_frame)
+                cv2.imshow("Frame", img)
     
                 # Exit on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -87,7 +116,7 @@ class VideoReceiver:
             except asyncio.TimeoutError:
                 print("Timeout waiting for frame, continuing...")
             except Exception as e:
-                print(f"Error in handle_track: {str(e)}")
+                #print(f"Error in handle_track: {str(e)}")
                 if "Connection" in str(e):
                     break
         print("Exiting handle_track")
