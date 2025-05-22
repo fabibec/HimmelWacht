@@ -29,6 +29,36 @@ model.eval()  # Set the model to evaluation mode
 
 
 
+# TODO
+
+class KalmanFilter2D:
+    def __init__(self):
+        self.kalman = cv2.KalmanFilter(4, 2)
+        self.kalman.measurementMatrix = np.array([[1, 0, 0, 0],
+                                                  [0, 1, 0, 0]], np.float32)
+
+        self.kalman.transitionMatrix = np.array([[1, 0, 1, 0],
+                                                 [0, 1, 0, 1],
+                                                 [0, 0, 1, 0],
+                                                 [0, 0, 0, 1]], np.float32)
+
+        self.kalman.processNoiseCov = np.eye(4, dtype=np.float32) * 0.03
+        self.kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * 0.5
+
+        self.last_measurement = None
+        self.last_prediction = None
+
+    def update(self, coord):
+        measured = np.array([[np.float32(coord[0])], [np.float32(coord[1])]])
+        if self.last_measurement is None:
+            self.kalman.statePre = np.array([[coord[0]], [coord[1]], [0], [0]], dtype=np.float32)
+            self.kalman.statePost = self.kalman.statePre.copy()
+        self.last_measurement = measured
+        self.kalman.correct(measured)
+        predicted = self.kalman.predict()
+        self.last_prediction = predicted
+        return int(predicted[0]), int(predicted[1])
+
 
 class VideoReceiver:
     def __init__(self):
@@ -101,10 +131,14 @@ class VideoReceiver:
 
                         center_x = (x1 + x2) / 2
                         center_y = (y1 + y2) / 2
-                        center = [center_x, center_y]
+                        center = [int(center_x), int(center_y)]
                         
+                        # Kalman Filter - added
+                        smoothed_center = kf.update(center)
+
+
                         message = f"{center}"
-                        client.publish("coordinates", message)
+                        client.publish("center", message)
                         print(f"Box {i}: x1={int(x1)}, y1={int(y1)}, x2={int(x2)}, y2={int(y2)}")
 
 
