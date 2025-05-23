@@ -4,7 +4,12 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${env:IDF_PATH}/components/**",
+                "${workspaceFolder}/components/**",
+                "${workspaceFolder}/components/drivers/**",
+                "${workspaceFolder}/components/interfaces/**",
+                "/home/fabi/esp/esp-idf/components/**",
+                "${env:IDF_PATH}/components/drivers/**",
+                "${env:IDF_PATH}/components/interfaces/**",
                 "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/include/freertos",
                 "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos",
                 "${env:IDF_PATH}/components/esp_system/include",
@@ -31,6 +36,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${env:IDF_PATH}/components/**",
+                "${env:IDF_PATH}/components/drivers/**",
+                "${env:IDF_PATH}/components/interfaces/**",
                 "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/include/freertos/**",
                 "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/**",
                 "${env:IDF_PATH}/components/esp_system/include/**",

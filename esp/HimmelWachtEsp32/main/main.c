@@ -6,7 +6,7 @@
 #include "freertos/task.h"
 #include "driver/uart.h"
 #include "ds4-driver.h"
-#include "manual-control.h"
+#include "vehicle-control.h"
 #include "motor-driver.h"
 #include "diff-drive.h"
 #include "platform-control.h"
@@ -106,7 +106,6 @@ void app_main(void)
         .mynr = 1};
 
     platform_init(&platform_cfg);
-    ESP_LOGI("Platform", "Platform initialized");
 
     fire_control_config_t fire_control_cfg = {
         .gun_arm_channel = PWM_CHANNEL,  // Set the channel for the gun arm
@@ -125,11 +124,5 @@ void app_main(void)
     ds4_init();
 
     // Initialize manual control on core 1
-    manual_control_init(&manual_control_cfg, diff_drive);
-
-    // Main task can do other work or just wait
-    while (1)
-    {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    vehicle_control_init(&manual_control_cfg, diff_drive);
 }

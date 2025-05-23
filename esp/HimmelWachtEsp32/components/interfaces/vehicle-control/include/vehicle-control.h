@@ -1,5 +1,5 @@
-#ifndef _MANUAL_CONTROL_H_
-#define _MANUAL_CONTROL_H_
+#ifndef _VEHICLE_CONTROL_H_
+#define _VEHICLE_CONTROL_H_
 #include <esp_err.h>
 #include "diff-drive.h"
 
@@ -14,6 +14,6 @@ typedef struct {
     int8_t deadzone_drive_update; // Deadzone for the drive update
 } manual_control_config_t;
 
-esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive);
+esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive);
 
-#endif // _MANUAL_CONTROL_H_
+#endif // _VEHICLE_CONTROL_H_

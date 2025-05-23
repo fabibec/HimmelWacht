@@ -95,15 +95,10 @@ static void on_device_disconnected(uni_hid_device_t* d) {
 */
 static uni_error_t on_device_ready(uni_hid_device_t* d) {
     ESP_LOGI("Bluepad32 Device Ready", "DS4 Ready");
-    ds4_lightbar_color_t MANUAL_MODE_COLOR = {142, 202, 230};
 
     if (d->report_parser.play_dual_rumble != NULL) {
         d->report_parser.play_dual_rumble(d, 0 /* delayed start ms */, 150 /* duration ms */, 128 /* weak magnitude */,
                                           40 /* strong magnitude */);
-    }
-
-    if (d->report_parser.set_lightbar_color != NULL) {
-        d->report_parser.set_lightbar_color(d, MANUAL_MODE_COLOR.red, MANUAL_MODE_COLOR.green, MANUAL_MODE_COLOR.blue);
     }
 
     xEventGroupSetBitsFromISR(ds4_event_group, DS4_CONNECTED, NULL);

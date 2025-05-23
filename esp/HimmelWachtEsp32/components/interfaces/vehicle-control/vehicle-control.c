@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "manual-control.h"
+#include "vehicle-control.h"
 #include "ds4-driver.h"
 #include "ds4-common.h"
 #include "fire-control.h"
@@ -15,7 +15,22 @@
 #include <esp_log.h>
 #include <esp_timer.h>
 
-#define MANUAL_CONTROL_TAG "Manual Control"
+#define VEHICLE_CONTROL_TAG "Vehicle Control"
+
+typedef enum{
+    MANUAL_TURRET_CONTROL,
+    AUTOMATIC_TURRET_CONTROL
+} vehicle_state_t;
+static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
+
+#define MANUAL_MODE_COLOR_R 80
+#define MANUAL_MODE_COLOR_G 200
+#define MANUAL_MODE_COLOR_B 120
+
+#define AUTO_MODE_COLOR_R 255
+#define AUTO_MODE_COLOR_G 180
+#define AUTO_MODE_COLOR_B 80
+
 
 static inline void process_fire(uint16_t r2_value);
 static inline void process_platform_left_right(int16_t stickX);
@@ -45,6 +60,7 @@ typedef struct {
 } ButtonHoldState;
 
 static ButtonHoldState platform_angle_reset_button_state = {0};
+static ButtonHoldState vehicle_mode_change_button_state = {0};
 
 /*
     Reset the platform angles to the starting position
@@ -54,6 +70,29 @@ static ButtonHoldState platform_angle_reset_button_state = {0};
 static inline void reset_platform_angles(void) {
     platform_x_to_start(&platform_x_angle);
     platform_y_to_start(&platform_y_angle);
+    ds4_rumble(0, 100, 0xF0, 0xF0);
+}
+
+static inline void set_vehicle_mode_color(void) {
+    if(vehicle_state == MANUAL_TURRET_CONTROL){
+        ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
+    } else {
+        ds4_lightbar_color(AUTO_MODE_COLOR_R, AUTO_MODE_COLOR_G, AUTO_MODE_COLOR_B);
+    }
+}
+
+/*
+    Change the vehicle mode between manual and automatic turret control
+
+    @author Fabian Becker
+*/
+static inline void change_vehicle_mode(void) {
+    if(vehicle_state == MANUAL_TURRET_CONTROL){
+        ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
+    } else {
+        vehicle_state = MANUAL_TURRET_CONTROL;
+    }
+    set_vehicle_mode_color();
     ds4_rumble(0, 100, 0xF0, 0xF0);
 }
 
@@ -83,9 +122,14 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
     return false;
 }
 
-static void manual_control_task(void* arg) {
+static void vehicle_control_task(void* arg) {
     diff_drive_handle_t *diff_drive = (diff_drive_handle_t *)arg;
+    static bool color_override = false;
     static ds4_input_t ds4_current_state;
+    static uint16_t platform_x_input = 0;
+    static uint16_t platform_y_input = 0;
+    static uint16_t platform_fire_input = 0;
+
 
     while(1){
         // Wait for the DS4 controller to connect
@@ -94,18 +138,49 @@ static void manual_control_task(void* arg) {
         // Wait for an event from the DS4 controller
         xQueueReceive(ds4_input_queue, &ds4_current_state, portMAX_DELAY);
 
-        // Reset to starting position if the button is held
-        if(check_button_hold(ds4_current_state.buttons & BUTTON_CIRCLE_MASK, &platform_angle_reset_button_state)) continue;
-
-        process_platform_left_right(ds4_current_state.rightStickX);
-        process_platform_up_down(ds4_current_state.rightStickY);
-        process_fire(ds4_current_state.rightTrigger);
+        // Drive can be controlled manually all the time
         process_drive(diff_drive, ds4_current_state.leftStickX, ds4_current_state.leftStickY * (-1));
+
+        // Check for mode change via button hold
+        bool buttons_pressed = (ds4_current_state.dpad & DPAD_UP_MASK) && (ds4_current_state.buttons & BUTTON_CROSS_MASK);
+        if(check_button_hold(buttons_pressed, &vehicle_mode_change_button_state)) continue;
+
+        // Turret can be controlled manually or automatically
+        if(vehicle_state == MANUAL_TURRET_CONTROL){
+
+            // Check for reset via button hold
+            if(check_button_hold(ds4_current_state.buttons & BUTTON_CIRCLE_MASK, &platform_angle_reset_button_state)) continue;
+
+            platform_x_input = ds4_current_state.rightStickX;
+            platform_y_input = ds4_current_state.rightStickY;
+            platform_fire_input = ds4_current_state.rightTrigger;
+
+        } else if(vehicle_state == AUTOMATIC_TURRET_CONTROL){
+            // Automatic turret control logic goes here
+
+            /*
+                platform_x_input = angle
+                platform_y_input = angle
+                platform_fire_input = value > 800 to fire
+            */
+
+            // If you want to override the color, set color_override to true and set color with the function ds4_lightbar_color
+        }
+
+        // Set the correct color for the lightbar
+        if(!color_override){
+            set_vehicle_mode_color();
+        }
+
+        process_platform_left_right(platform_x_input);
+        process_platform_up_down(platform_y_input);
+        process_fire(platform_fire_input);
+
     }
 }
 
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
-    ESP_LOGI(MANUAL_CONTROL_TAG, "x: %d, y: %d", x, y);
+    ESP_LOGI(VEHICLE_CONTROL_TAG, "x: %d, y: %d", x, y);
     //check if new x, y is bigger than the deadzone compared to the previous x, y
     if(abs(x - diff_drive_prev_x) < 75 && abs(y - diff_drive_prev_y) < 75){
         return;
@@ -122,7 +197,7 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
     esp_err_t ret = diff_drive_send_cmd(diff_drive, &matrix);
     if (ret != ESP_OK)
     {
-        ESP_LOGE(MANUAL_CONTROL_TAG, "Failed to send command: %s", esp_err_to_name(ret));
+        ESP_LOGE(VEHICLE_CONTROL_TAG, "Failed to send command: %s", esp_err_to_name(ret));
     }
 }
 
@@ -189,13 +264,13 @@ static inline void process_platform_up_down(int16_t stickY){
     }
 }
 
-esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
+esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
     const char* TAG = "Init";
 
     // Validate the input
     if(cfg == NULL){
         ESP_LOGE(
-            MANUAL_CONTROL_TAG,
+            VEHICLE_CONTROL_TAG,
             "%s: Invalid configuration, cfg is NULL",
             TAG
         );
@@ -203,7 +278,7 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
     }
     if(cfg->core > 1){
         ESP_LOGE(
-            MANUAL_CONTROL_TAG,
+            VEHICLE_CONTROL_TAG,
             "%s: Invalid core number (%d), must be 0 or 1",
             TAG,
             cfg->core
@@ -220,10 +295,11 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
     dt = _IQ21div(_IQ21(1), _IQ21(cfg->input_processing_freq_hz));
 
     platform_angle_reset_button_state.action = reset_platform_angles;
+    vehicle_mode_change_button_state.action = change_vehicle_mode;
 
     if(ds4_input_queue == NULL){
         ESP_LOGE(
-            MANUAL_CONTROL_TAG,
+            VEHICLE_CONTROL_TAG,
             "%s: DS4 input queue is not initialized",
             TAG
         );
@@ -239,8 +315,8 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
 
     // Create the fire control task
     task_created = xTaskCreatePinnedToCore(
-        manual_control_task,   /* Function to implement the task */
-        "manualcontrol_task", /* Name of the task */
+        vehicle_control_task,   /* Function to implement the task */
+        "vehicle_control_task", /* Name of the task */
         4096,       /* Stack size in words */
         diff_drive,  /* Task input parameter */
         0,          /* Priority of the task */
@@ -250,16 +326,16 @@ esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t 
 
     if (task_created != pdTRUE) {
         ESP_LOGE(
-            MANUAL_CONTROL_TAG,
-            "%s: Failed to create manual control task",
+            VEHICLE_CONTROL_TAG,
+            "%s: Failed to create vehicle control task",
             TAG
         );
         return ESP_FAIL;
     }
 
     ESP_LOGI(
-        MANUAL_CONTROL_TAG,
-        "%s: Manual control initialized successfully",
+        VEHICLE_CONTROL_TAG,
+        "%s: Vehicle control initialized successfully",
         TAG
     );
 
