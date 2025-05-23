@@ -2,8 +2,6 @@
     "configurations": [
         {
             "name": "Linux",
-            // All this stuff is just to keep the intellisense happy
-            // and is not needed for the actual build
             "includePath": [
                 "${workspaceFolder}/**",
                 "../esp-idf-v5.4.1/**",
@@ -24,7 +22,16 @@
                 "../esp-idf-v5.4.1/components/esp_common/include",
                 "../esp-idf-v5.4.1/components/freertos/FreeRTOS-Kernel-SMP/portable/linux/include",
                 "../esp-idf-v5.4.1/components/freertos/esp_additions/include",
-                "../esp-idf-v5.4.1/components/heap/include"
+                "../esp-idf-v5.4.1/components/heap/include",
+                "../esp-idf-v5.4.1/components/esp_event/include",
+                "../esp-idf-v5.4.1/components/nvs_flash/include",
+                "../esp-idf-v5.4.1/components/esp_wifi/include",
+                "../esp-idf-v5.4.1/components/esp_hw_support/include",
+                "../esp-idf-v5.4.1/components/linux/include",
+                "../esp-idf-v5.4.1/components/esp_partition/include",
+                "../esp-idf-v5.4.1/components/log/include",
+                "../esp-idf-v5.4.1/components/esp_rom/include",
+                "../esp-idf-v5.4.1/components/esp_rom/linux/include/linux"
             ],
             "defines": [
                 "ESP_PLATFORM",
