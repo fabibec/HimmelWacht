@@ -4,17 +4,70 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/../esp-idf-v5.4.1/**",
-                "${workspaceFolder}/../esp-idf-v5.4.1/components/freertos/FreeRTOS-Kernel/include/freertos",
-                "${workspaceFolder}/../bluepad32-v4.2.0/**",
-                "${workspaceFolder}/components/ds4-driver/include",
-                "${workspaceFolder}/components/motor-driver/include"
+                "${env:IDF_PATH}/components/**",
+                "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/include/freertos",
+                "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos",
+                "${env:IDF_PATH}/components/esp_system/include",
+                "${env:IDF_PATH}/components/soc/include",
+                "${env:IDF_PATH}/components/soc/esp32/include/soc",
+                "${env:IDF_PATH}/components/soc/esp32/register/soc",
+                "${env:IDF_PATH}/components/xtensa/include",
+                "${env:IDF_PATH}/components/newlib/platform_include",
+                "${env:IDF_PATH}/components/esp_common/include",
+                "${env:IDF_PATH}/components/esp_rom/include",
+                "${env:IDF_PATH}/components/esp_hw_support/include"
             ],
-            "defines": [],
-            "compilerPath": "/usr/lib64/ccache/gcc",
-            "cStandard": "c11",
+            "defines": [
+                "ESP_PLATFORM",
+                "CONFIG_FREERTOS_UNICORE=0"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
             "cppStandard": "gnu++17",
             "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "ESP-IDF",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:IDF_PATH}/components/**",
+                "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/include/freertos/**",
+                "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/**",
+                "${env:IDF_PATH}/components/esp_system/include/**",
+                "${env:IDF_PATH}/components/soc/include/**",
+                "${env:IDF_PATH}/components/soc/esp32/include/soc/**",
+                "${env:IDF_PATH}/components/soc/esp32/register/soc/**",
+                "${env:IDF_PATH}/components/xtensa/include/**",
+                "${env:IDF_PATH}/components/newlib/platform_include/**",
+                "${env:IDF_PATH}/components/esp_common/include/**",
+                "${env:IDF_PATH}/components/esp_rom/include/**",
+                "${env:IDF_PATH}/components/esp_hw_support/include/**"
+            ],
+            "defines": [
+                "ESP_PLATFORM",
+                "CONFIG_FREERTOS_UNICORE=0"
+            ],
+            "compilerPath": "${env:HOME}/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "gcc-x64",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**",
+                    "${env:IDF_PATH}/components/**",
+                    "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/include/freertos/**",
+                    "${env:IDF_PATH}/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/**",
+                    "${env:IDF_PATH}/components/esp_system/include/**",
+                    "${env:IDF_PATH}/components/soc/include/**",
+                    "${env:IDF_PATH}/components/soc/esp32/include/soc/**",
+                    "${env:IDF_PATH}/components/soc/esp32/register/soc/**",
+                    "${env:IDF_PATH}/components/xtensa/include/**",
+                    "${env:IDF_PATH}/components/newlib/platform_include/**",
+                    "${env:IDF_PATH}/components/esp_common/include/**",
+                    "${env:IDF_PATH}/components/esp_rom/include/**",
+                    "${env:IDF_PATH}/components/esp_hw_support/include/**"
+                ]
+            }
         }
     ],
     "version": 4

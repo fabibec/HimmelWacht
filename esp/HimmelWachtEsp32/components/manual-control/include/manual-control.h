@@ -1,6 +1,7 @@
 #ifndef _MANUAL_CONTROL_H_
 #define _MANUAL_CONTROL_H_
 #include <esp_err.h>
+#include "diff-drive.h"
 
 typedef struct {
     int64_t button_hold_threshold_us; // Threshold for button hold in microseconds
@@ -10,8 +11,9 @@ typedef struct {
     int8_t deadzone_x; // X Deadzone for the joystick input
     int8_t deadzone_y; // Y Deadzone for the joystick input
     int8_t core; // Core to run the control on
+    int8_t deadzone_drive_update; // Deadzone for the drive update
 } manual_control_config_t;
 
-esp_err_t manual_control_init(manual_control_config_t* cfg);
+esp_err_t manual_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive);
 
 #endif // _MANUAL_CONTROL_H_
