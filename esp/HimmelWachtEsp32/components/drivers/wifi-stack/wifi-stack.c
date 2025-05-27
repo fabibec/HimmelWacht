@@ -23,6 +23,8 @@ static esp_event_handler_instance_t wifi_event_handler;
 
 static EventGroupHandle_t s_wifi_event_group = NULL;
 
+esp_err_t connect(char* wifi_ssid, char* wifi_password);
+
 static void ip_event_cb(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     ESP_LOGI(TAG, "Handling IP event, event code 0x%" PRIx32, event_id);
@@ -92,7 +94,7 @@ static void wifi_event_cb(void *arg, esp_event_base_t event_base, int32_t event_
 }
 
 
-esp_err_t tutorial_init(void)
+esp_err_t wifi_stack_init(char* wifi_ssid, char* wifi_password)
 {
     // Initialize Non-Volatile Storage (NVS)
     esp_err_t ret = nvs_flash_init();
@@ -141,10 +143,10 @@ esp_err_t tutorial_init(void)
                                                         &ip_event_cb,
                                                         NULL,
                                                         &ip_event_handler));
-    return ret;
+    return connect(wifi_ssid, wifi_password);
 }
 
-esp_err_t tutorial_connect(char* wifi_ssid, char* wifi_password)
+esp_err_t connect(char* wifi_ssid, char* wifi_password)
 {
     wifi_config_t wifi_config = {
         .sta = {
@@ -180,18 +182,24 @@ esp_err_t tutorial_connect(char* wifi_ssid, char* wifi_password)
     return ESP_FAIL;
 }
 
-esp_err_t tutorial_disconnect(void)
+esp_err_t wifi_stack_deinit(void)
 {
     if (s_wifi_event_group) {
         vEventGroupDelete(s_wifi_event_group);
     }
 
-    return esp_wifi_disconnect();
-}
+    esp_err_t ret = esp_wifi_disconnect();
+    if (ret == ESP_ERR_WIFI_NOT_INIT) {
+        ESP_LOGE(TAG, "Couldn't disconnect from Wi-Fi, Wi-Fi stack not initialized");
+        return ret;
+    }else if (ret == ESP_ERR_WIFI_NOT_STARTED) {
+        ESP_LOGI(TAG, "Couldn't disconnect from Wi-Fi, Wi-Fi stack not started");
+    } else if (ret == ESP_FAIL) {
+        ESP_LOGE(TAG, "Couldn't disconnect from Wi-Fi: %s", esp_err_to_name(ret));
+        return ret;
+    }
 
-esp_err_t tutorial_deinit(void)
-{
-    esp_err_t ret = esp_wifi_stop();
+    ret = esp_wifi_stop();
     if (ret == ESP_ERR_WIFI_NOT_INIT) {
         ESP_LOGE(TAG, "Wi-Fi stack not initialized");
         return ret;

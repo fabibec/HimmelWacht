@@ -9,10 +9,6 @@
 
 #include "freertos/FreeRTOS.h"
 
-esp_err_t tutorial_init(void);
+esp_err_t wifi_stack_init(char* wifi_ssid, char* wifi_password);
 
-esp_err_t tutorial_connect(char* wifi_ssid, char* wifi_password);
-
-esp_err_t tutorial_disconnect(void);
-
-esp_err_t tutorial_deinit(void);
+esp_err_t wifi_stack_deinit(void);
