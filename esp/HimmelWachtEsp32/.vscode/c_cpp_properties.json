@@ -31,7 +31,9 @@
                 "../esp-idf-v5.4.1/components/esp_partition/include",
                 "../esp-idf-v5.4.1/components/log/include",
                 "../esp-idf-v5.4.1/components/esp_rom/include",
-                "../esp-idf-v5.4.1/components/esp_rom/linux/include/linux"
+                "../esp-idf-v5.4.1/components/esp_rom/linux/include/linux",
+                "../esp-idf-v5.4.1/components/mqtt/esp-mqtt/include",
+                "${workspaceFolder}/components/interfaces/mqtt-stack/include"
             ],
             "defines": [
                 "ESP_PLATFORM",
