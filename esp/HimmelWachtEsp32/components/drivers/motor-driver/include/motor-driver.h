@@ -27,8 +27,6 @@ typedef struct
     mcpwm_io_signals_t pwm_signal; // PWM signal
     uint8_t pwm_gpio_num;          // GPIO for PWM output
     uint8_t dir_gpio_num;          // GPIO for direction output
-    uint8_t fault_gpio_num;        // GPIO connected to FAULT pin
-    uint8_t fault_led_gpio_num;    // GPIO for LED to indicate fault
     uint16_t pwm_frequency_hz;     // PWM frequency in Hz
     uint8_t ramp_rate;
     uint8_t ramp_intervall_ms;
@@ -52,7 +50,6 @@ typedef struct
     uint32_t last_update_ms;             // Time when the state was entered
     motor_config_t config;               // Motor configuration
     bool initialized;                    // Flag to indicate if the motor is initialized
-    bool fault_active;                   // Flag to indicate if the motor is in a fault state
 } motor_handle_t;
 
 /**
@@ -100,22 +97,6 @@ esp_err_t motor_driver_emergency_stop(motor_handle_t *motor);
  * @return esp_err_t ESP_OK on success, error code otherwise
  */
 esp_err_t motor_driver_deinit(motor_handle_t *motor);
-
-/**
- * @brief Check if the motor is in a fault state
- *
- * @param motor Pointer to the motor handle
- * @return true if fault is active, false otherwise
- */
-bool motor_driver_is_fault_active(motor_handle_t *motor);
-
-/**
- * @brief Clear the fault state of the motor
- *
- * @param motor Pointer to the motor handle
- * @return esp_err_t ESP_OK on success, error code otherwise
- */
-esp_err_t motor_driver_clear_fault(motor_handle_t *motor);
 
 void motor_driver_print_all_parameters(motor_handle_t *motor);
 

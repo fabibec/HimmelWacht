@@ -199,42 +199,6 @@ static void diff_drive_task(void *pvParameters)
     // Main task loop
     while (1)
     {
-        // // Check for fault condition
-        // if (motor_driver_is_fault_active(drive->left_motor) ||
-        //     motor_driver_is_fault_active(drive->right_motor))
-        // {
-
-        //     // Emergency stop
-        //     motor_driver_set_speed(drive->left_motor, 0, MOTOR_DIRECTION_STOP);
-        //     motor_driver_set_speed(drive->right_motor, 0, MOTOR_DIRECTION_STOP);
-        //     motor_driver_update(drive->left_motor);
-        //     motor_driver_update(drive->right_motor);
-
-        //     // Log fault state
-        //     ESP_LOGE(TAG, "Fault detected: left=%d, right=%d",
-        //              motor_driver_is_fault_active(drive->left_motor),
-        //              motor_driver_is_fault_active(drive->right_motor));
-
-        //     // Wait for recovery delay
-        //     vTaskDelay(pdMS_TO_TICKS(drive->config.recovery_time_ms));
-
-        //     // Attempt to clear faults
-        //     if (motor_driver_is_fault_active(drive->left_motor))
-        //     {
-        //         ESP_LOGI(TAG, "Attempting to clear left motor fault");
-        //         motor_driver_clear_fault(drive->left_motor);
-        //     }
-
-        //     if (motor_driver_is_fault_active(drive->right_motor))
-        //     {
-        //         ESP_LOGI(TAG, "Attempting to clear right motor fault");
-        //         motor_driver_clear_fault(drive->right_motor);
-        //     }
-
-        //     // Continue to next iteration
-        //     continue;
-        // }
-
         // Process commands from queue pdMS_TO_TICKS(drive->config.queue_timout_ms)
         if (xQueueReceive(drive->cmd_queue, &cmd, drive->config.queue_timout_ms) == pdTRUE)
         {

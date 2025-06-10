@@ -17,13 +17,9 @@
 // Define GPIO pins for motors
 #define RIGHT_MOTOR_PWM_GPIO 23
 #define RIGHT_MOTOR_DIR_GPIO 22
-#define RIGHT_MOTOR_FAULT_GPIO 21
-#define RIGHT_MOTOR_FAULT_LED 3
 
 #define LEFT_MOTOR_PWM_GPIO 27
 #define LEFT_MOTOR_DIR_GPIO 26
-#define LEFT_MOTOR_FAULT_GPIO 25
-#define LEFT_MOTOR_FAULT_LED 32
 
 #define MAX_INPUT_VALUE 512
 
@@ -79,8 +75,6 @@ void app_main(void)
         .pwm_signal = MCPWM0A,
         .pwm_gpio_num = LEFT_MOTOR_PWM_GPIO,
         .dir_gpio_num = LEFT_MOTOR_DIR_GPIO,
-        .fault_gpio_num = LEFT_MOTOR_FAULT_GPIO,
-        .fault_led_gpio_num = LEFT_MOTOR_FAULT_LED,
         .pwm_frequency_hz = 20000,
         .ramp_rate = 5,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
@@ -96,8 +90,6 @@ void app_main(void)
         .pwm_signal = MCPWM1A,
         .pwm_gpio_num = RIGHT_MOTOR_PWM_GPIO,
         .dir_gpio_num = RIGHT_MOTOR_DIR_GPIO,
-        .fault_gpio_num = RIGHT_MOTOR_FAULT_GPIO,
-        .fault_led_gpio_num = RIGHT_MOTOR_FAULT_LED,
         .pwm_frequency_hz = 20000,
         .ramp_rate = 5,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
