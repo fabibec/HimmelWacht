@@ -8,6 +8,7 @@
 #include "cJSON.h"
 #include <string.h>
 #include "mqtt-stack.h"
+#include "log_wrapper.h"
 
 static const char *TAG = "MQTT_STACK";
 
@@ -122,35 +123,35 @@ static void stack_event_handler(void *handler_args, esp_event_base_t base, int32
     
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+            LOGI(TAG, "MQTT_EVENT_CONNECTED");
             set_connection_status(true);
             
             // Subscribe to the configured topic
             int msg_id = esp_mqtt_client_subscribe(mqtt_client, mqtt_cfg.topic, 1);
-            ESP_LOGI(TAG, "Subscribed to topic %s, msg_id=%d", mqtt_cfg.topic, msg_id);
+            LOGI(TAG, "Subscribed to topic %s, msg_id=%d", mqtt_cfg.topic, msg_id);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+            LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
             set_connection_status(false);
             break;
 
         case MQTT_EVENT_SUBSCRIBED:
-            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
             break;
 
         case MQTT_EVENT_UNSUBSCRIBED:
-            ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
             break;
 
         case MQTT_EVENT_PUBLISHED:
-            ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
             break;
 
         case MQTT_EVENT_DATA:
-            ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-            ESP_LOGI(TAG, "TOPIC=%.*s", event->topic_len, event->topic);
-            ESP_LOGI(TAG, "DATA=%.*s", event->data_len, event->data);
+            LOGI(TAG, "MQTT_EVENT_DATA");
+            LOGI(TAG, "TOPIC=%.*s", event->topic_len, event->topic);
+            LOGI(TAG, "DATA=%.*s", event->data_len, event->data);
             
             // Parse and queue the turret command
             if (turret_cmd_queue != NULL) {
@@ -164,15 +165,15 @@ static void stack_event_handler(void *handler_args, esp_event_base_t base, int32
             break;
 
         case MQTT_EVENT_ERROR:
-            ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+            LOGI(TAG, "MQTT_EVENT_ERROR");
             if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-                ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+                ESP_LOGE(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
             }
             set_connection_status(false);
             break;
 
         default:
-            ESP_LOGI(TAG, "Other event id:%d", event->event_id);
+            LOGI(TAG, "Other event id:%d", event->event_id);
             break;
     }
 }
@@ -219,10 +220,10 @@ esp_err_t mqtt_stack_init(const mqtt_config_t *config) {
 
     esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, stack_event_handler, NULL);
 
-    ESP_LOGI(TAG, "MQTT component initialized");
-    ESP_LOGI(TAG, "Broker: %s", mqtt_cfg.broker_uri);
-    ESP_LOGI(TAG, "Topic: %s", mqtt_cfg.topic);
-    ESP_LOGI(TAG, "Client ID: %s", mqtt_cfg.client_id);
+    LOGI(TAG, "MQTT component initialized");
+    LOGI(TAG, "Broker: %s", mqtt_cfg.broker_uri);
+    LOGI(TAG, "Topic: %s", mqtt_cfg.topic);
+    LOGI(TAG, "Client ID: %s", mqtt_cfg.client_id);
 
     if(start() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start MQTT client");
@@ -230,7 +231,7 @@ esp_err_t mqtt_stack_init(const mqtt_config_t *config) {
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "MQTT client started successfully");
+    LOGI(TAG, "MQTT client started successfully");
 
     return ESP_OK;
 }
@@ -266,7 +267,7 @@ esp_err_t start(void) {
         return ret;
     }
 
-    ESP_LOGI(TAG, "MQTT client started");
+    LOGI(TAG, "MQTT client started");
     return ESP_OK;
 }
 
