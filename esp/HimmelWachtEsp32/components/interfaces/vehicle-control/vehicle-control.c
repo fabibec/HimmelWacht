@@ -9,7 +9,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "esp_timer.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -37,14 +36,9 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 static inline void process_manual_fire(uint16_t r2_value);
 static inline void process_manual_platform_left_right(int16_t stickX);
 static inline void process_manual_platform_up_down(int16_t stickY);
-static inline void process_auto_fire();
 static inline void process_platform_left_right();
 static inline void process_platform_up_down();
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y);
-
-static esp_timer_handle_t fire_timer = NULL;
-static bool fire_timer_active = false;
-static bool fire_command = false;
 
 static int8_t platform_x_angle = 0;
 static int8_t platform_y_angle = 0;
@@ -70,46 +64,6 @@ typedef struct {
 
 static ButtonHoldState platform_angle_reset_button_state = {0};
 static ButtonHoldState vehicle_mode_change_button_state = {0};
-
-static void fire_timer_callback(void* arg) {
-    // Reset fire input when timer expires
-    fire_command = false;
-    fire_timer_active = false;
-    ESP_LOGI("FIRE_TIMER", "Fire timer expired - stopping fire");
-}
-
-static esp_err_t init_fire_timer(void) {
-    const esp_timer_create_args_t fire_timer_args = {
-        .callback = &fire_timer_callback,
-        .arg = NULL,
-        .name = "fire_timer"
-    };
-    
-    esp_err_t ret = esp_timer_create(&fire_timer_args, &fire_timer);
-    if (ret != ESP_OK) {
-        ESP_LOGE("FIRE_TIMER", "Failed to create fire timer: %s", esp_err_to_name(ret));
-        return ret;
-    }
-    
-    ESP_LOGI("FIRE_TIMER", "Fire timer initialized successfully");
-    return ESP_OK;
-}
-
-static void start_fire_timer(void) {
-    // Stop existing timer if running
-    if (fire_timer_active) {
-        esp_timer_stop(fire_timer);
-    }
-    
-    // Start timer for 400ms (400000 microseconds)
-    esp_err_t ret = esp_timer_start_once(fire_timer, 400000);
-    if (ret == ESP_OK) {
-        fire_timer_active = true;
-        ESP_LOGI("FIRE_TIMER", "Fire timer started/restarted for 400ms");
-    } else {
-        ESP_LOGE("FIRE_TIMER", "Failed to start fire timer: %s", esp_err_to_name(ret));
-    }
-}
 
 /*
     Reset the platform angles to the starting position
@@ -209,25 +163,17 @@ static void vehicle_control_task(void* arg) {
             mqtt_turret_cmd_t mqtt_cmd;
             
             if(mqtt_stack_get_turret_command(&mqtt_cmd) == ESP_OK) {
-                ESP_LOGI("VEHICLE_CONTROL", "got command");
                 // Update platform positions
                 platform_x_angle = mqtt_cmd.platform_x_angle;
                 platform_y_angle = mqtt_cmd.platform_y_angle;
-                
-                // Handle fire command with timer
-                if(mqtt_cmd.fire_command) {
-                    fire_command = true;
-                    start_fire_timer();
-                    ESP_LOGI("VEHICLE_CONTROL", "Fire command received - starting timer");
-                }else{
-                    ESP_LOGI("VEHICLE_CONTROL", "fire command not received");
-                }
 
                 process_platform_left_right();
                 process_platform_up_down();
-                process_auto_fire();
+                
+                if(mqtt_cmd.fire_command) {
+                    fire_control_trigger_shot();
+                }
             } else {
-                ESP_LOGI("VEHICLE_CONTROL", "no command");
                 // stay in position
             }
         }
@@ -267,12 +213,6 @@ static inline void process_manual_fire(uint16_t r2_value){
         r2_was_pressed = true;
     } else if (r2_value <= R2_THRESHOLD) {
         r2_was_pressed = false;
-    }
-}
-
-static inline void process_auto_fire(){
-    if(fire_command) {
-        fire_control_trigger_shot();
     }
 }
 
@@ -374,12 +314,6 @@ esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t
             "%s: DS4 input queue is not initialized",
             TAG
         );
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    // Initialize fire timer
-    if (init_fire_timer() != ESP_OK) {
-        ESP_LOGE("VEHICLE_CONTROL", "Failed to initialize fire timer");
         return ESP_ERR_INVALID_STATE;
     }
 
