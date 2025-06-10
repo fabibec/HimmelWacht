@@ -63,54 +63,31 @@ static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd
 
     bool success = true;
     
-    // Parse platform_x (required)
-    cJSON *platform_x_json = cJSON_GetObjectItem(json, "platform_x");
-    if (cJSON_IsNumber(platform_x_json)) {
-        cmd->platform_x = (uint16_t)platform_x_json->valueint;
+    // Parse platform_x_angle (required)
+    cJSON *platform_x_angle_json = cJSON_GetObjectItem(json, "platform_x_angle");
+    if (cJSON_IsNumber(platform_x_angle_json)) {
+        cmd->platform_x_angle = (int8_t)platform_x_angle_json->valueint;
     } else {
-        ESP_LOGE(TAG, "Missing or invalid platform_x");
+        ESP_LOGE(TAG, "Missing or invalid platform_x_angle");
         success = false;
     }
 
-    // Parse platform_y (required)
-    cJSON *platform_y_json = cJSON_GetObjectItem(json, "platform_y");
-    if (cJSON_IsNumber(platform_y_json)) {
-        cmd->platform_y = (uint16_t)platform_y_json->valueint;
+    // Parse platform_y_angle (required)
+    cJSON *platform_y_angle_json = cJSON_GetObjectItem(json, "platform_y_angle");
+    if (cJSON_IsNumber(platform_y_angle_json)) {
+        cmd->platform_y_angle = (int8_t)platform_y_angle_json->valueint;
     } else {
-        ESP_LOGE(TAG, "Missing or invalid platform_y");
+        ESP_LOGE(TAG, "Missing or invalid platform_y_angle");
         success = false;
     }
 
     // Parse fire_command (required)
     cJSON *fire_cmd_json = cJSON_GetObjectItem(json, "fire_command");
-    if (cJSON_IsNumber(fire_cmd_json)) {
-        cmd->fire_command = (uint16_t)fire_cmd_json->valueint;
+    if (cJSON_IsBool(fire_cmd_json)) {
+        cmd->fire_command = cJSON_IsTrue(fire_cmd_json);
     } else {
         ESP_LOGE(TAG, "Missing or invalid fire_command");
         success = false;
-    }
-
-    // Parse optional color override
-    cJSON *color_override_json = cJSON_GetObjectItem(json, "color_override");
-    if (cJSON_IsBool(color_override_json)) {
-        cmd->color_override = cJSON_IsTrue(color_override_json);
-        
-        if (cmd->color_override) {
-            cJSON *r_json = cJSON_GetObjectItem(json, "override_r");
-            cJSON *g_json = cJSON_GetObjectItem(json, "override_g");
-            cJSON *b_json = cJSON_GetObjectItem(json, "override_b");
-            
-            if (cJSON_IsNumber(r_json) && cJSON_IsNumber(g_json) && cJSON_IsNumber(b_json)) {
-                cmd->override_r = (uint8_t)r_json->valueint;
-                cmd->override_g = (uint8_t)g_json->valueint;
-                cmd->override_b = (uint8_t)b_json->valueint;
-            } else {
-                ESP_LOGW(TAG, "Color override enabled but RGB values missing or invalid");
-                cmd->color_override = false;
-            }
-        }
-    } else {
-        cmd->color_override = false;
     }
 
     cJSON_Delete(json);

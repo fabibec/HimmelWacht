@@ -4,10 +4,12 @@
 #include "ds4-common.h"
 #include "fire-control.h"
 #include "platform-control.h"
+#include "mqtt-stack.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "esp_timer.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -32,10 +34,17 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 #define AUTO_MODE_COLOR_B 80
 
 
-static inline void process_fire(uint16_t r2_value);
-static inline void process_platform_left_right(int16_t stickX);
-static inline void process_platform_up_down(int16_t stickY);
+static inline void process_manual_fire(uint16_t r2_value);
+static inline void process_manual_platform_left_right(int16_t stickX);
+static inline void process_manual_platform_up_down(int16_t stickY);
+static inline void process_auto_fire();
+static inline void process_platform_left_right();
+static inline void process_platform_up_down();
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y);
+
+static esp_timer_handle_t fire_timer = NULL;
+static bool fire_timer_active = false;
+static bool fire_command = false;
 
 static int8_t platform_x_angle = 0;
 static int8_t platform_y_angle = 0;
@@ -61,6 +70,46 @@ typedef struct {
 
 static ButtonHoldState platform_angle_reset_button_state = {0};
 static ButtonHoldState vehicle_mode_change_button_state = {0};
+
+static void fire_timer_callback(void* arg) {
+    // Reset fire input when timer expires
+    fire_command = false;
+    fire_timer_active = false;
+    ESP_LOGI("FIRE_TIMER", "Fire timer expired - stopping fire");
+}
+
+static esp_err_t init_fire_timer(void) {
+    const esp_timer_create_args_t fire_timer_args = {
+        .callback = &fire_timer_callback,
+        .arg = NULL,
+        .name = "fire_timer"
+    };
+    
+    esp_err_t ret = esp_timer_create(&fire_timer_args, &fire_timer);
+    if (ret != ESP_OK) {
+        ESP_LOGE("FIRE_TIMER", "Failed to create fire timer: %s", esp_err_to_name(ret));
+        return ret;
+    }
+    
+    ESP_LOGI("FIRE_TIMER", "Fire timer initialized successfully");
+    return ESP_OK;
+}
+
+static void start_fire_timer(void) {
+    // Stop existing timer if running
+    if (fire_timer_active) {
+        esp_timer_stop(fire_timer);
+    }
+    
+    // Start timer for 400ms (400000 microseconds)
+    esp_err_t ret = esp_timer_start_once(fire_timer, 400000);
+    if (ret == ESP_OK) {
+        fire_timer_active = true;
+        ESP_LOGI("FIRE_TIMER", "Fire timer started/restarted for 400ms");
+    } else {
+        ESP_LOGE("FIRE_TIMER", "Failed to start fire timer: %s", esp_err_to_name(ret));
+    }
+}
 
 /*
     Reset the platform angles to the starting position
@@ -124,12 +173,10 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
 
 static void vehicle_control_task(void* arg) {
     diff_drive_handle_t *diff_drive = (diff_drive_handle_t *)arg;
-    static bool color_override = false;
     static ds4_input_t ds4_current_state;
     static uint16_t platform_x_input = 0;
     static uint16_t platform_y_input = 0;
     static uint16_t platform_fire_input = 0;
-
 
     while(1){
         // Wait for the DS4 controller to connect
@@ -155,27 +202,37 @@ static void vehicle_control_task(void* arg) {
             platform_y_input = ds4_current_state.rightStickY;
             platform_fire_input = ds4_current_state.rightTrigger;
 
+            process_manual_platform_left_right(platform_x_input);
+            process_manual_platform_up_down(platform_y_input);
+            process_manual_fire(platform_fire_input);
         } else if(vehicle_state == AUTOMATIC_TURRET_CONTROL){
-            // Automatic turret control logic goes here
+            mqtt_turret_cmd_t mqtt_cmd;
+            
+            if(mqtt_stack_get_turret_command(&mqtt_cmd) == ESP_OK) {
+                ESP_LOGI("VEHICLE_CONTROL", "got command");
+                // Update platform positions
+                platform_x_angle = mqtt_cmd.platform_x_angle;
+                platform_y_angle = mqtt_cmd.platform_y_angle;
+                
+                // Handle fire command with timer
+                if(mqtt_cmd.fire_command) {
+                    fire_command = true;
+                    start_fire_timer();
+                    ESP_LOGI("VEHICLE_CONTROL", "Fire command received - starting timer");
+                }else{
+                    ESP_LOGI("VEHICLE_CONTROL", "fire command not received");
+                }
 
-            /*
-                platform_x_input = angle
-                platform_y_input = angle
-                platform_fire_input = value > 800 to fire
-            */
-
-            // If you want to override the color, set color_override to true and set color with the function ds4_lightbar_color
+                process_platform_left_right();
+                process_platform_up_down();
+                process_auto_fire();
+            } else {
+                ESP_LOGI("VEHICLE_CONTROL", "no command");
+                // stay in position
+            }
         }
 
-        // Set the correct color for the lightbar
-        if(!color_override){
-            set_vehicle_mode_color();
-        }
-
-        process_platform_left_right(platform_x_input);
-        process_platform_up_down(platform_y_input);
-        process_fire(platform_fire_input);
-
+        set_vehicle_mode_color();
     }
 }
 
@@ -201,7 +258,7 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
     }
 }
 
-static inline void process_fire(uint16_t r2_value){
+static inline void process_manual_fire(uint16_t r2_value){
     static bool r2_was_pressed = false;
     const uint16_t R2_THRESHOLD = 800;
 
@@ -213,7 +270,13 @@ static inline void process_fire(uint16_t r2_value){
     }
 }
 
-static inline void process_platform_left_right(int16_t stickX){
+static inline void process_auto_fire(){
+    if(fire_command) {
+        fire_control_trigger_shot();
+    }
+}
+
+static inline void process_manual_platform_left_right(int16_t stickX){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
     if(abs(stickX) < deadzone_x) {
         stickX = 0;
@@ -228,6 +291,11 @@ static inline void process_platform_left_right(int16_t stickX){
     _iq21 speed = _IQ21mpy(normalized_stickX, max_deg_per_sec_x);
     platform_x_angle -= _IQ21mpy(speed, dt) >> 21;
 
+    process_platform_left_right();
+
+}
+
+static inline void process_platform_left_right(){
     int8_t set_angle = 0;
     platform_x_set_angle(platform_x_angle, &set_angle);
 
@@ -236,10 +304,9 @@ static inline void process_platform_left_right(int16_t stickX){
         platform_x_angle = set_angle;
         ds4_rumble(0, 100, 0xF0, 0xF0);
     }
-
 }
 
-static inline void process_platform_up_down(int16_t stickY){
+static inline void process_manual_platform_up_down(int16_t stickY){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
     if(abs(stickY) < deadzone_y) {
         stickY = 0;
@@ -254,6 +321,10 @@ static inline void process_platform_up_down(int16_t stickY){
     _iq21 speed = _IQ21mpy(normalized_stickY, max_deg_per_sec_y);
     platform_y_angle -= _IQ21mpy(speed, dt) >> 21;
 
+    process_platform_up_down();
+}
+
+static inline void process_platform_up_down(){
     int8_t set_angle = 0;
     platform_y_set_angle(platform_y_angle, &set_angle);
 
@@ -303,6 +374,12 @@ esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t
             "%s: DS4 input queue is not initialized",
             TAG
         );
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    // Initialize fire timer
+    if (init_fire_timer() != ESP_OK) {
+        ESP_LOGE("VEHICLE_CONTROL", "Failed to initialize fire timer");
         return ESP_ERR_INVALID_STATE;
     }
 

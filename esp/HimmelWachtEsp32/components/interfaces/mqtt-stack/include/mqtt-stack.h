@@ -7,13 +7,9 @@
 // MQTT turret command structure
 typedef struct
 {
-    uint16_t platform_x;   // Horizontal angle/position
-    uint16_t platform_y;   // Vertical angle/position
-    uint16_t fire_command; // Fire command (>800 to fire)
-    bool color_override;   // Whether to override DS4 lightbar color
-    uint8_t override_r;    // Red component (0-255)
-    uint8_t override_g;    // Green component (0-255)
-    uint8_t override_b;    // Blue component (0-255)
+    int8_t platform_x_angle;   // Horizontal angle/position
+    int8_t platform_y_angle;   // Vertical angle/position
+    bool fire_command; // Fire command (>800 to fire)
 } mqtt_turret_cmd_t;
 
 // MQTT component configuration
