@@ -31,6 +31,8 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 #define AUTO_MODE_COLOR_G 180
 #define AUTO_MODE_COLOR_B 80
 
+#define DRIVING_NULL_BOUNDARY 75
+#define DRIVING_MIN_CHANGE 20
 
 static inline void process_fire(uint16_t r2_value);
 static inline void process_platform_left_right(int16_t stickX);
@@ -41,6 +43,7 @@ static int8_t platform_x_angle = 0;
 static int8_t platform_y_angle = 0;
 static int8_t deadzone_x = 0;
 static int8_t deadzone_y = 0;
+static bool null_pos_done = 0;
 
 static int16_t diff_drive_prev_x = 0;
 static int16_t diff_drive_prev_y = 0;
@@ -180,10 +183,24 @@ static void vehicle_control_task(void* arg) {
 }
 
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
-    ESP_LOGI(VEHICLE_CONTROL_TAG, "x: %d, y: %d", x, y);
-    //check if new x, y is bigger than the deadzone compared to the previous x, y
-    if(abs(x - diff_drive_prev_x) < 75 && abs(y - diff_drive_prev_y) < 75){
-        return;
+    bool is_null_position = (abs(x) < DRIVING_NULL_BOUNDARY && abs(y) < DRIVING_NULL_BOUNDARY);
+    bool significant_change = (abs(x - diff_drive_prev_x) >= DRIVING_MIN_CHANGE || abs(y - diff_drive_prev_y) >= DRIVING_MIN_CHANGE);
+    
+    if (is_null_position) {
+        if (null_pos_done) {
+            return;
+        }
+        
+        null_pos_done = 1;
+        x = 0;
+        y = 0;
+    } else {
+        null_pos_done = 0;
+        
+        // Skip update if change is too small
+        if (!significant_change) {
+            return;
+        }
     }
 
     // Save the previous x, y values
