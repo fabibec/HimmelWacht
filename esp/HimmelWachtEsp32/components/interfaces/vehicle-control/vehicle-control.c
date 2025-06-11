@@ -91,8 +91,10 @@ static inline void set_vehicle_mode_color(void) {
 */
 static inline void change_vehicle_mode(void) {
     if(vehicle_state == MANUAL_TURRET_CONTROL){
-        ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
+        vehicle_state = AUTOMATIC_TURRET_CONTROL;
+        //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
     } else {
+        //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         vehicle_state = MANUAL_TURRET_CONTROL;
     }
     set_vehicle_mode_color();
@@ -148,7 +150,6 @@ static void vehicle_control_task(void* arg) {
 
         // Turret can be controlled manually or automatically
         if(vehicle_state == MANUAL_TURRET_CONTROL){
-
             // Check for reset via button hold
             if(check_button_hold(ds4_current_state.buttons & BUTTON_CIRCLE_MASK, &platform_angle_reset_button_state)) continue;
 
