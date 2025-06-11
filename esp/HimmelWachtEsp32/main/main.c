@@ -38,8 +38,8 @@
 #define TAG "main"
 
 // Enter the Wi-Fi credentials here
-#define WIFI_SSID "SSID"
-#define WIFI_PASSWORD "PW"
+#define WIFI_SSID "TI Roboter"
+#define WIFI_PASSWORD "ITRobot!"
 
 void app_main(void)
 {
@@ -61,7 +61,7 @@ void app_main(void)
 
         // Configure MQTT component
     mqtt_config_t mqtt_config = {
-        .broker_uri = "mqtt://192.168.178.33:1883",  // Replace with your broker IP
+        .broker_uri = "mqtt://172.16.19.147:1883",  // Replace with your broker IP
         .topic = "vehicle/turret/cmd",               // Configurable topic
         .client_id = "esp32_vehicle_01",             // Unique client ID
         .keepalive = 60,                              // Keep alive interval
