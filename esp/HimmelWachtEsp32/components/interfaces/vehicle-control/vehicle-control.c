@@ -93,6 +93,7 @@ static inline void change_vehicle_mode(void) {
     if(vehicle_state == MANUAL_TURRET_CONTROL){
         vehicle_state = AUTOMATIC_TURRET_CONTROL;
         //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
+        platform_reset(&platform_x_angle, &platform_y_angle);
     } else {
         //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         vehicle_state = MANUAL_TURRET_CONTROL;
@@ -319,8 +320,7 @@ esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t
     }
 
     // Set the initial angles, this is already done in the platform_init function, but this is used to get the current angle
-    platform_x_to_start(&platform_x_angle);
-    platform_y_to_start(&platform_y_angle);
+    platform_reset(&platform_x_angle, &platform_y_angle);
 
     // Create the task for manual control
     BaseType_t task_created = pdFALSE;
