@@ -33,5 +33,6 @@ esp_err_t platform_x_set_angle(int8_t angle, int8_t* result);
 esp_err_t platform_y_set_angle(int8_t angle, int8_t* result);
 esp_err_t platform_x_to_start(int8_t* result);
 esp_err_t platform_y_to_start(int8_t* result);
+esp_err_t platform_reset(int8_t* result_x, int8_t* result_y);
 
 #endif //_PLATFORM_CONTROL_H_

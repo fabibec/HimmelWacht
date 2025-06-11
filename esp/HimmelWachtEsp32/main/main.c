@@ -1,9 +1,16 @@
 #include "sdkconfig.h"
 
+// wifi_tutorial.c
 #include <stdio.h>
-#include <esp_log.h>
-#include "freertos/FreeRTOS.h"
+
+#include "esp_log.h"
+#include "esp_wifi.h"
+
+#include "wifi-stack.h"
+#include "mqtt-stack.h"
+
 #include "freertos/task.h"
+
 #include "driver/uart.h"
 #include "ds4-driver.h"
 #include "vehicle-control.h"
@@ -23,8 +30,49 @@
 
 #define MAX_INPUT_VALUE 512
 
+
+#define TAG "main"
+
+// Enter the Wi-Fi credentials here
+#define WIFI_SSID "TI Roboter"
+#define WIFI_PASSWORD "ITRobot!"
+
 void app_main(void)
 {
+    esp_err_t ret = wifi_stack_init(WIFI_SSID, WIFI_PASSWORD);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to connect to Wi-Fi network");
+    }
+
+    wifi_ap_record_t ap_info;
+    ret = esp_wifi_sta_get_ap_info(&ap_info);
+    if (ret == ESP_ERR_WIFI_CONN) {
+        ESP_LOGE(TAG, "Wi-Fi station interface not initialized");
+    }
+    else if (ret == ESP_ERR_WIFI_NOT_CONNECT) {
+        ESP_LOGE(TAG, "Wi-Fi station is not connected");
+    }
+
+    ESP_LOGI(TAG, "Wi-Fi stack successfully initialized");
+
+        // Configure MQTT component
+    mqtt_config_t mqtt_config = {
+        .broker_uri = "mqtt://172.16.19.147:1883",  // Replace with your broker IP
+        .topic = "vehicle/turret/cmd",               // Configurable topic
+        .client_id = "esp32_vehicle_01",             // Unique client ID
+        .keepalive = 60,                              // Keep alive interval
+        .network_timeout_ms = 5000,          // Network timeout in milliseconds
+        .reconnect_timeout_ms = 5000,       // Reconnect timeout in milliseconds
+        .queue_timeout_ticks = 10,                // Queue timeout in ticks
+    };
+    
+    // Initialize MQTT component
+    ret = mqtt_stack_init(&mqtt_config);
+    if (ret != ESP_OK) {
+        ESP_LOGE("MAIN", "Failed to start MQTT component: %s", esp_err_to_name(ret));
+        return;
+    }
+
     pca9685_config_t pwm_board_cfg = {
         .device_address = 0x40,
         .freq = 50,

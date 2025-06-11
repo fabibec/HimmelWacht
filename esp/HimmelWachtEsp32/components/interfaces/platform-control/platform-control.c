@@ -240,3 +240,20 @@ esp_err_t platform_set_angle(uint8_t channel, int8_t angle, int8_t* result){
     // Error checking happens inside of the function
     return pca9685_set_pwm_on_off(channel, 0, off_period);
 }
+
+esp_err_t platform_reset(int8_t* result_x, int8_t* result_y){
+    esp_err_t ret_x = platform_x_to_start(result_x);
+    esp_err_t ret_y = platform_y_to_start(result_y);
+
+    if(ret_x != ESP_OK || ret_y != ESP_OK){
+        ESP_LOGE(
+            PLATFORM_COMPONENT_TAG,
+            "Platform reset failed: X: %s, Y: %s",
+            esp_err_to_name(ret_x),
+            esp_err_to_name(ret_y)
+        );
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}

@@ -4,6 +4,7 @@
 #include "ds4-common.h"
 #include "fire-control.h"
 #include "platform-control.h"
+#include "mqtt-stack.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -34,9 +35,11 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 #define DRIVING_NULL_BOUNDARY 75
 #define DRIVING_MIN_CHANGE 20
 
-static inline void process_fire(uint16_t r2_value);
-static inline void process_platform_left_right(int16_t stickX);
-static inline void process_platform_up_down(int16_t stickY);
+static inline void process_manual_fire(uint16_t r2_value);
+static inline void process_manual_platform_left_right(int16_t stickX);
+static inline void process_manual_platform_up_down(int16_t stickY);
+static inline void process_platform_left_right();
+static inline void process_platform_up_down();
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y);
 
 static int8_t platform_x_angle = 0;
@@ -91,8 +94,11 @@ static inline void set_vehicle_mode_color(void) {
 */
 static inline void change_vehicle_mode(void) {
     if(vehicle_state == MANUAL_TURRET_CONTROL){
-        ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
+        vehicle_state = AUTOMATIC_TURRET_CONTROL;
+        //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
+        platform_reset(&platform_x_angle, &platform_y_angle);
     } else {
+        //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         vehicle_state = MANUAL_TURRET_CONTROL;
     }
     set_vehicle_mode_color();
@@ -127,12 +133,10 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
 
 static void vehicle_control_task(void* arg) {
     diff_drive_handle_t *diff_drive = (diff_drive_handle_t *)arg;
-    static bool color_override = false;
     static ds4_input_t ds4_current_state;
     static uint16_t platform_x_input = 0;
     static uint16_t platform_y_input = 0;
     static uint16_t platform_fire_input = 0;
-
 
     while(1){
         // Wait for the DS4 controller to connect
@@ -150,7 +154,6 @@ static void vehicle_control_task(void* arg) {
 
         // Turret can be controlled manually or automatically
         if(vehicle_state == MANUAL_TURRET_CONTROL){
-
             // Check for reset via button hold
             if(check_button_hold(ds4_current_state.buttons & BUTTON_CIRCLE_MASK, &platform_angle_reset_button_state)) continue;
 
@@ -158,27 +161,29 @@ static void vehicle_control_task(void* arg) {
             platform_y_input = ds4_current_state.rightStickY;
             platform_fire_input = ds4_current_state.rightTrigger;
 
+            process_manual_platform_left_right(platform_x_input);
+            process_manual_platform_up_down(platform_y_input);
+            process_manual_fire(platform_fire_input);
         } else if(vehicle_state == AUTOMATIC_TURRET_CONTROL){
-            // Automatic turret control logic goes here
+            mqtt_turret_cmd_t mqtt_cmd;
+            
+            if(mqtt_stack_get_turret_command(&mqtt_cmd) == ESP_OK) {
+                // Update platform positions
+                platform_x_angle = mqtt_cmd.platform_x_angle;
+                platform_y_angle = mqtt_cmd.platform_y_angle;
 
-            /*
-                platform_x_input = angle
-                platform_y_input = angle
-                platform_fire_input = value > 800 to fire
-            */
-
-            // If you want to override the color, set color_override to true and set color with the function ds4_lightbar_color
+                process_platform_left_right();
+                process_platform_up_down();
+                
+                if(mqtt_cmd.fire_command) {
+                    fire_control_trigger_shot();
+                }
+            } else {
+                // stay in position
+            }
         }
 
-        // Set the correct color for the lightbar
-        if(!color_override){
-            set_vehicle_mode_color();
-        }
-
-        process_platform_left_right(platform_x_input);
-        process_platform_up_down(platform_y_input);
-        process_fire(platform_fire_input);
-
+        set_vehicle_mode_color();
     }
 }
 
@@ -218,7 +223,7 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
     }
 }
 
-static inline void process_fire(uint16_t r2_value){
+static inline void process_manual_fire(uint16_t r2_value){
     static bool r2_was_pressed = false;
     const uint16_t R2_THRESHOLD = 800;
 
@@ -230,7 +235,7 @@ static inline void process_fire(uint16_t r2_value){
     }
 }
 
-static inline void process_platform_left_right(int16_t stickX){
+static inline void process_manual_platform_left_right(int16_t stickX){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
     if(abs(stickX) < deadzone_x) {
         stickX = 0;
@@ -245,6 +250,11 @@ static inline void process_platform_left_right(int16_t stickX){
     _iq21 speed = _IQ21mpy(normalized_stickX, max_deg_per_sec_x);
     platform_x_angle -= _IQ21mpy(speed, dt) >> 21;
 
+    process_platform_left_right();
+
+}
+
+static inline void process_platform_left_right(){
     int8_t set_angle = 0;
     platform_x_set_angle(platform_x_angle, &set_angle);
 
@@ -253,10 +263,9 @@ static inline void process_platform_left_right(int16_t stickX){
         platform_x_angle = set_angle;
         ds4_rumble(0, 100, 0xF0, 0xF0);
     }
-
 }
 
-static inline void process_platform_up_down(int16_t stickY){
+static inline void process_manual_platform_up_down(int16_t stickY){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
     if(abs(stickY) < deadzone_y) {
         stickY = 0;
@@ -271,6 +280,10 @@ static inline void process_platform_up_down(int16_t stickY){
     _iq21 speed = _IQ21mpy(normalized_stickY, max_deg_per_sec_y);
     platform_y_angle -= _IQ21mpy(speed, dt) >> 21;
 
+    process_platform_up_down();
+}
+
+static inline void process_platform_up_down(){
     int8_t set_angle = 0;
     platform_y_set_angle(platform_y_angle, &set_angle);
 
@@ -324,8 +337,7 @@ esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t
     }
 
     // Set the initial angles, this is already done in the platform_init function, but this is used to get the current angle
-    platform_x_to_start(&platform_x_angle);
-    platform_y_to_start(&platform_y_angle);
+    platform_reset(&platform_x_angle, &platform_y_angle);
 
     // Create the task for manual control
     BaseType_t task_created = pdFALSE;
