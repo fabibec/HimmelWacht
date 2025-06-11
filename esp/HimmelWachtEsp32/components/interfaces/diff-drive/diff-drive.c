@@ -4,6 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include "log_wrapper.h"
+#include <IQmathLib.h>
 
 #define TAG "DIFF_DRIVE"
 
@@ -252,10 +253,25 @@ esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive)
     return ESP_OK;
 }
 
-static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *left_limit, float *right_limit, float *left_speed, float *right_speed,
-                             motor_direction_t *left_dir, motor_direction_t *right_dir)
+static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, 
+                               float *left_limit, float *right_limit, 
+                               float *left_speed, float *right_speed,
+                               motor_direction_t *left_dir, motor_direction_t *right_dir)
 {
-    // check stop
+    // Convert constants to IQ format
+    const _iq IQ_ZERO = _IQ(0.0);
+    const _iq IQ_ONE = _IQ(1.0);
+    const _iq IQ_MINUS_ONE = _IQ(-1.0);
+    const _iq IQ_DEADBAND = _IQ(0.20);
+    const _iq IQ_SHARP_TURN_THRESHOLD = _IQ(0.7);
+    const _iq IQ_HUNDRED = _IQ(100.0);
+    const _iq IQ_FIFTY = _IQ(50.0);
+    
+    // Convert float inputs to IQ format
+    _iq left_limit_iq = _IQ(*left_limit);
+    _iq right_limit_iq = _IQ(*right_limit);
+    
+    // Check stop condition
     if (x == 0 && y == 0)
     {
         *left_speed = 0.0f;
@@ -265,49 +281,52 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *le
         return;
     }
 
+    // Convert max_input to IQ format
+    _iq max_input_iq = _IQ((float)*max_input);
+    
     // Normalize inputs to -1.0 to 1.0 range
-    float h_norm = (float)x / (float)*max_input;
-    float v_norm = (float)y / (float)*max_input;
+    _iq h_norm = _IQdiv(_IQ((float)x), max_input_iq);
+    _iq v_norm = _IQdiv(_IQ((float)y), max_input_iq);
 
     // Clamp values to ensure they stay within bounds
-    if (h_norm > 1.0f)
-        h_norm = 1.0f;
-    if (h_norm < -1.0f)
-        h_norm = -1.0f;
-    if (v_norm > 1.0f)
-        v_norm = 1.0f;
-    if (v_norm < -1.0f)
-        v_norm = -1.0f;
+    if (h_norm > IQ_ONE)
+        h_norm = IQ_ONE;
+    if (h_norm < IQ_MINUS_ONE)
+        h_norm = IQ_MINUS_ONE;
+    if (v_norm > IQ_ONE)
+        v_norm = IQ_ONE;
+    if (v_norm < IQ_MINUS_ONE)
+        v_norm = IQ_MINUS_ONE;
 
-    float left = 0.0f;
-    float right = 0.0f;
+    _iq left = IQ_ZERO;
+    _iq right = IQ_ZERO;
 
-    //handle straight forward and backward movement
-    if(fabsf(h_norm) < 0.20f)
+    // Handle straight forward and backward movement (deadband)
+    if (_IQabs(h_norm) < IQ_DEADBAND)
     {
-        h_norm = 0.0f;
+        h_norm = IQ_ZERO;
     }
-    //handle straight left and right movement for in place rotation
-    if(fabsf(v_norm) < 0.20f)
+    
+    // Handle straight left and right movement for in place rotation (deadband)
+    if (_IQabs(v_norm) < IQ_DEADBAND)
     {
-        v_norm = 0.0f;
+        v_norm = IQ_ZERO;
     }
-
 
     // Zero or near-zero vertical input - rotate in place
-    if (fabsf(v_norm) == 0)
+    if (_IQabs(v_norm) == IQ_ZERO)
     {
         // Sharp turn mode - use opposing wheel directions
-        left = fabsf(h_norm) * 100.0f;
-        right = fabsf(h_norm) * 100.0f;
+        left = _IQmpy(_IQabs(h_norm), IQ_HUNDRED);
+        right = _IQmpy(_IQabs(h_norm), IQ_HUNDRED);
 
-        if (h_norm > 0)
+        if (h_norm > IQ_ZERO)
         {
             // Turning right (clockwise)
             *left_dir = MOTOR_DIRECTION_FORWARD;
             *right_dir = MOTOR_DIRECTION_BACKWARD;
         }
-        else if (h_norm < 0)
+        else if (h_norm < IQ_ZERO)
         {
             // Turning left (counter-clockwise)
             *left_dir = MOTOR_DIRECTION_BACKWARD;
@@ -318,14 +337,14 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *le
             // No movement
             *left_dir = MOTOR_DIRECTION_STOP;
             *right_dir = MOTOR_DIRECTION_STOP;
-            left = 0.0f;
-            right = 0.0f;
+            left = IQ_ZERO;
+            right = IQ_ZERO;
         }
     }
     else
     {
         // Set base directions according to vertical input
-        if (v_norm > 0)
+        if (v_norm > IQ_ZERO)
         {
             *left_dir = MOTOR_DIRECTION_FORWARD;
             *right_dir = MOTOR_DIRECTION_FORWARD;
@@ -337,25 +356,25 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *le
         }
 
         // Get absolute value of vertical input for base speed
-        float base_speed = fabsf(v_norm);
+        _iq base_speed = _IQabs(v_norm);
 
         // Apply turning factor
-        if (h_norm != 0)
+        if (h_norm != IQ_ZERO)
         {
             // Calculate turn influence (0.0 to 1.0)
-            float turn_factor = fabsf(h_norm);
+            _iq turn_factor = _IQabs(h_norm);
 
             // Apply turn factor to appropriate wheel
-            if (h_norm > 0)
+            if (h_norm > IQ_ZERO)
             {
                 // Turning right - slow down right wheel
-                left = base_speed * 100.0f;
-                right = base_speed * (1.0f - turn_factor) * 100.0f;
+                left = _IQmpy(base_speed, IQ_HUNDRED);
+                right = _IQmpy(_IQmpy(base_speed, (IQ_ONE - turn_factor)), IQ_HUNDRED);
 
                 // If sharp turn and strong horizontal input, reverse the inner wheel
-                if (turn_factor > 0.7f)
+                if (turn_factor > IQ_SHARP_TURN_THRESHOLD)
                 {
-                    right = turn_factor * 50.0f; // Scale for reasonable reverse speed
+                    right = _IQmpy(turn_factor, IQ_FIFTY); // Scale for reasonable reverse speed
                     if (*right_dir == MOTOR_DIRECTION_FORWARD)
                         *right_dir = MOTOR_DIRECTION_BACKWARD;
                     else
@@ -365,13 +384,13 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *le
             else
             {
                 // Turning left - slow down left wheel
-                left = base_speed * (1.0f - turn_factor) * 100.0f;
-                right = base_speed * 100.0f;
+                left = _IQmpy(_IQmpy(base_speed, (IQ_ONE - turn_factor)), IQ_HUNDRED);
+                right = _IQmpy(base_speed, IQ_HUNDRED);
 
                 // If sharp turn and strong horizontal input, reverse the inner wheel
-                if (turn_factor > 0.7f)
+                if (turn_factor > IQ_SHARP_TURN_THRESHOLD)
                 {
-                    left = turn_factor * 50.0f; // Scale for reasonable reverse speed
+                    left = _IQmpy(turn_factor, IQ_FIFTY); // Scale for reasonable reverse speed
                     if (*left_dir == MOTOR_DIRECTION_FORWARD)
                         *left_dir = MOTOR_DIRECTION_BACKWARD;
                     else
@@ -382,24 +401,24 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *le
         else
         {
             // Straight movement
-            left = base_speed * 100.0f;
-            right = base_speed * 100.0f;
+            left = _IQmpy(base_speed, IQ_HUNDRED);
+            right = _IQmpy(base_speed, IQ_HUNDRED);
         }
     }
 
     // Clamp speeds to [0, 100]
-    if (left > 100.0f)
-        left = 100.0f;
-    if (left < 0.0f)
-        left = 0.0f;
-    if (right > 100.0f)
-        right = 100.0f;
-    if (right < 0.0f)
-        right = 0.0f;
+    if (left > IQ_HUNDRED)
+        left = IQ_HUNDRED;
+    if (left < IQ_ZERO)
+        left = IQ_ZERO;
+    if (right > IQ_HUNDRED)
+        right = IQ_HUNDRED;
+    if (right < IQ_ZERO)
+        right = IQ_ZERO;
 
-    // Scale them to 0-max_pwm
-    *left_speed = (left / 100.0f) * *left_limit;
-    *right_speed = (right / 100.0f) * *right_limit;
+    // Scale them to 0-max_pwm and convert back to float
+    *left_speed = _IQtoF(_IQmpy(_IQdiv(left, IQ_HUNDRED), left_limit_iq));
+    *right_speed = _IQtoF(_IQmpy(_IQdiv(right, IQ_HUNDRED), right_limit_iq));
 }
 
 void diff_drive_print_all_parameters(diff_drive_handle_t *diff_drive)
