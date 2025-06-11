@@ -63,7 +63,7 @@ void app_main(void)
         .task_priority = 0,
         .task_stack_size = 4096,
         .task_core_id = 0,
-        .task_delay_ms = 80,
+        .task_delay_ms = 50,
         .queue_timout_ms = 10,
     };
 
@@ -76,7 +76,7 @@ void app_main(void)
         .pwm_gpio_num = LEFT_MOTOR_PWM_GPIO,
         .dir_gpio_num = LEFT_MOTOR_DIR_GPIO,
         .pwm_frequency_hz = 20000,
-        .ramp_rate = 5,            // Adjust as needed
+        .ramp_rate = 8,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
         .direction_hysteresis = 5, // Adjust as needed
         .pwm_duty_limit = 100,
@@ -91,7 +91,7 @@ void app_main(void)
         .pwm_gpio_num = RIGHT_MOTOR_PWM_GPIO,
         .dir_gpio_num = RIGHT_MOTOR_DIR_GPIO,
         .pwm_frequency_hz = 20000,
-        .ramp_rate = 5,            // Adjust as needed
+        .ramp_rate = 85,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
         .direction_hysteresis = 5, // Adjust as needed
         .pwm_duty_limit = 100,
