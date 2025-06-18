@@ -5,42 +5,68 @@
   <title>WebRTC with Simulated Bounding Boxes</title>
   <style>
     body {
-      background: black;
+      background: linear-gradient(135deg, #0f0f23, #1a1a2e);
       margin: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h1#heading {
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+      font-size: 3rem;
+      margin-bottom: 20px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      user-select: none;
     }
 
     #video-container {
       position: relative;
-      width: 640px;
-      height: 480px;
+      width: 800px;
+      height: 600px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 255, 0, 0.1);
+      border: 2px solid rgba(0, 255, 0, 0.3);
     }
 
-    video, canvas {
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    canvas {
       position: absolute;
       top: 0;
       left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
     #loading {
       position: absolute;
       top: 0;
       left: 0;
-      width: 640px;
-      height: 480px;
+      width: 100%;
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.8);
       z-index: 10;
+      backdrop-filter: blur(5px);
     }
 
     .spinner {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid lime;
+      border: 4px solid rgba(0, 255, 0, 0.3);
+      border-top: 4px solid #00ff00;
       border-radius: 50%;
       width: 50px;
       height: 50px;
@@ -53,20 +79,61 @@
     }
 
     #gyro-output {
-      color: white;
+      color: #00ff00;
       text-align: center;
-      margin-top: 20px;
+      margin-top: 30px;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 15px 30px;
+      background: rgba(0, 255, 0, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+
+    #status-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 5;
+    }
+
+    .status-item {
+      background: rgba(0, 0, 0, 0.7);
+      color: #00ff00;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
       font-family: monospace;
-      font-size: 16px;
+    }
+
+    .connection-active {
+      color: #00ff00;
+    }
+
+    .connection-inactive {
+      color: #ff6b6b;
     }
   </style>
 </head>
 <body>
 
+<h1 id="heading">Himmelwacht</h1>
+
 <div id="video-container">
   <div id="loading"><div class="spinner"></div></div>
-  <video id="video" autoplay muted playsinline width="1280" height="1080"></video>
-  <canvas id="overlay" width="1280" height="1080"></canvas>
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="overlay"></canvas>
+  
+  <div id="status-bar">
+    <div id="video-status" class="status-item connection-inactive">Video: Connecting...</div>
+    <div id="bbox-status" class="status-item connection-inactive">Boxes: Offline</div>
+    <div id="gyro-status" class="status-item connection-inactive">Gyro: Offline</div>
+  </div>
 </div>
 
 <div id="gyro-output">Waiting for gyro data...</div>
@@ -77,24 +144,43 @@
   const ctx = canvas.getContext('2d');
   const loading = document.getElementById('loading');
   const gyroOutput = document.getElementById('gyro-output');
+  
+  // Status elements
+  const videoStatus = document.getElementById('video-status');
+  const bboxStatus = document.getElementById('bbox-status');
+  const gyroStatus = document.getElementById('gyro-status');
+
+  // Scale factors for coordinate conversion
+  let scaleX = 1;
+  let scaleY = 1;
+  
+  // Store current bounding boxes
+  let currentBoxes = [];
+
+  function updateCanvasSize() {
+    const rect = video.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Calculate scale factors for coordinate conversion
+    scaleX = canvas.width / 1280;  // Original video width
+    scaleY = canvas.height / 1080; // Original video height
+  }
 
   video.onplaying = () => {
-  loading.style.display = 'none';
-  drawCrosshairLoop(); // start drawing only after video is playing
+    loading.style.display = 'none';
+    videoStatus.textContent = 'Video: Active';
+    videoStatus.className = 'status-item connection-active';
+    updateCanvasSize();
+    drawCrosshairLoop();
   };
-  video.addEventListener('loadedmetadata', () => {
-  const desiredWidth = 640;
-  const desiredHeight = 480;
 
-  const scaleX = desiredWidth / video.videoWidth;
-  const scaleY = desiredHeight / video.videoHeight;
-  const scale = Math.min(scaleX, scaleY);
+  video.onloadedmetadata = () => {
+    updateCanvasSize();
+  };
 
-  document.getElementById('video-container').style.transform = `scale(${scale})`;
-  document.getElementById('video-container').style.transformOrigin = 'top left';
-
-});
-
+  // Resize handler
+  window.addEventListener('resize', updateCanvasSize);
 
   // === WebRTC via MediaMTX ===
   const peer = new RTCPeerConnection({
@@ -103,6 +189,13 @@
 
   peer.oniceconnectionstatechange = () => {
     console.log('ICE State:', peer.iceConnectionState);
+    if (peer.iceConnectionState === 'connected' || peer.iceConnectionState === 'completed') {
+      videoStatus.textContent = 'Video: Connected';
+      videoStatus.className = 'status-item connection-active';
+    } else if (peer.iceConnectionState === 'disconnected' || peer.iceConnectionState === 'failed') {
+      videoStatus.textContent = 'Video: Disconnected';
+      videoStatus.className = 'status-item connection-inactive';
+    }
   };
 
   peer.ontrack = (event) => {
@@ -142,18 +235,32 @@
       console.log("WebRTC connection established.");
     } catch (err) {
       console.error("WebRTC connection failed:", err);
+      videoStatus.textContent = 'Video: Failed';
+      videoStatus.className = 'status-item connection-inactive';
     }
   }
 
   connectWebRTC();
 
   // === WebSocket for Bounding Boxes ===
-  const bboxSocket = new WebSocket('ws://172.16.3.105:8001'); // Adjust if needed
+  const bboxSocket = new WebSocket('ws://172.16.3.105:8001');
+
+  bboxSocket.onopen = () => {
+    bboxStatus.textContent = 'Boxes: Connected';
+    bboxStatus.className = 'status-item connection-active';
+  };
+
+  bboxSocket.onclose = () => {
+    bboxStatus.textContent = 'Boxes: Disconnected';
+    bboxStatus.className = 'status-item connection-inactive';
+  };
 
   bboxSocket.onmessage = function (event) {
     try {
       const data = JSON.parse(event.data);
-      if (data.boxes) drawBoxes(data.boxes);
+      if (data.boxes) {
+        currentBoxes = data.boxes;
+      }
     } catch (err) {
       console.error('Invalid JSON from bounding box server:', err);
     }
@@ -162,10 +269,13 @@
   function drawCrosshair() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const size = 40;
+    const size = 20;
 
-    ctx.strokeStyle = 'green';
-    ctx.lineWidth = 10;
+    // Outer glow
+    ctx.shadowColor = '#00ff00';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 3;
 
     ctx.beginPath();
     ctx.moveTo(centerX - size, centerY);
@@ -173,37 +283,67 @@
     ctx.moveTo(centerX, centerY - size);
     ctx.lineTo(centerX, centerY + size);
     ctx.stroke();
+
+    // Inner crosshair
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
   }
 
   function drawCrosshairLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawCrosshair(); // always draw it
-  requestAnimationFrame(drawCrosshairLoop);
-}
-
-
-
-
-  function drawBoxes(boxes) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Always draw crosshair
+    drawCrosshair();
+    
+    // Draw current bounding boxes if any
+    if (currentBoxes && currentBoxes.length > 0) {
+      // Draw bounding boxes with proper scaling
+      ctx.shadowColor = '#00ff00';
+      ctx.shadowBlur = 5;
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#00ff00';
 
-    // Draw bounding boxes
-    ctx.strokeStyle = 'lime';
-    ctx.lineWidth = 2;
-    ctx.font = '14px sans-serif';
-    ctx.fillStyle = 'lime';
+      currentBoxes.forEach(box => {
+        // Scale coordinates to match display size
+        const scaledX = box.x * scaleX;
+        const scaledY = box.y * scaleY;
+        const scaledWidth = box.width * scaleX;
+        const scaledHeight = box.height * scaleY;
 
-    if (boxes && boxes.length > 0) {
-      boxes.forEach(box => {
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-        if (box.label) ctx.fillText(box.label, box.x, box.y - 5);
+        // Draw box
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+        
+        // Draw label with background
+        if (box.label) {
+          const textWidth = ctx.measureText(box.label).width;
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.fillRect(scaledX, scaledY - 20, textWidth + 8, 16);
+          ctx.fillStyle = '#000000';
+          ctx.fillText(box.label, scaledX + 4, scaledY - 8);
+          ctx.fillStyle = '#00ff00';
+        }
       });
     }
+    
+    requestAnimationFrame(drawCrosshairLoop);
   }
-
 
   // === WebSocket for Gyro Data ===
   const gyroSocket = new WebSocket('ws://172.16.9.13:8765');
+
+  gyroSocket.onopen = () => {
+    gyroStatus.textContent = 'Gyro: Connected';
+    gyroStatus.className = 'status-item connection-active';
+  };
+
+  gyroSocket.onclose = () => {
+    gyroStatus.textContent = 'Gyro: Disconnected';
+    gyroStatus.className = 'status-item connection-inactive';
+  };
 
   gyroSocket.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -212,6 +352,8 @@
 
   gyroSocket.onerror = () => {
     gyroOutput.textContent = "Could not connect to gyro server.";
+    gyroStatus.textContent = 'Gyro: Error';
+    gyroStatus.className = 'status-item connection-inactive';
   };
 </script>
 
