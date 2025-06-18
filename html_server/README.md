@@ -1,1 +1,1 @@
-index.html needs to be started on raspberry pi with **python3 -m http.server 8000**
+# start server on raspberry pi with python3 html_daemon.py
