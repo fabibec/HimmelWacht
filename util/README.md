@@ -1,1 +1,1 @@
-Cv2*.so is the compiled version of opencv with gstreamer enabled
+TODO - ADD LATEST MEDIAMTX YML
