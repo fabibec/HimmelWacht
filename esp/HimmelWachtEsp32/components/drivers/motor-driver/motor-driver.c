@@ -15,7 +15,6 @@
 static esp_err_t set_pwm(motor_handle_t *motor, float duty_cycle);
 static esp_err_t set_dir(motor_handle_t *motor, motor_direction_t direction);
 static esp_err_t init_motor(motor_handle_t *motor, const motor_config_t *config);
-static void IRAM_ATTR fault_isr_handler(void *arg);
 
 static uint8_t instance_cntr = 0;
 uint8_t instance_nr = 0;
@@ -124,29 +123,6 @@ static esp_err_t init_motor(motor_handle_t *motor, const motor_config_t *config)
         return ret;
     }
 
-    // Configure fault GPIO
-    if (config->fault_gpio_num != GPIO_NUM_NC)
-    {
-        gpio_config_t fault_io_conf = {
-            .pin_bit_mask = (1ULL << config->fault_gpio_num),
-            .mode = GPIO_MODE_INPUT,
-            .pull_up_en = GPIO_PULLUP_ENABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = GPIO_INTR_NEGEDGE};
-
-        ret = gpio_config(&fault_io_conf);
-        if (ret != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to configure fault GPIO %d", config->fault_gpio_num);
-            return ret;
-        }
-    }
-    else
-    {
-        ESP_LOGE(TAG, "Fault GPIO not configured");
-        return ESP_ERR_INVALID_ARG;
-    }
-
     if (instance_cntr == 0)
     {
         ret = gpio_install_isr_service(0);
@@ -157,87 +133,11 @@ static esp_err_t init_motor(motor_handle_t *motor, const motor_config_t *config)
         }
     }
 
-    ret = gpio_isr_handler_add(config->fault_gpio_num, fault_isr_handler, motor);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to add ISR handler for fault GPIO %d", config->fault_gpio_num);
-        return ret;
-    }
-
-    // Configure fault LED GPIO
-    if (config->fault_led_gpio_num != GPIO_NUM_NC)
-    {
-        gpio_config_t fault_led_io_conf = {
-            .pin_bit_mask = (1ULL << config->fault_led_gpio_num),
-            .mode = GPIO_MODE_OUTPUT,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = GPIO_INTR_DISABLE};
-
-        ret = gpio_config(&fault_led_io_conf);
-        if (ret != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to configure fault LED GPIO %d", config->fault_led_gpio_num);
-            return ret;
-        }
-        else
-        {
-            LOGI(TAG, "Fault LED GPIO %d configured", config->fault_led_gpio_num);
-        }
-        // gpio_set_level(config->fault_led_gpio_num, 0); // Turn off LED
-    }
-    else
-    {
-        ESP_LOGE(TAG, "Fault LED GPIO not configured");
-        return ESP_ERR_INVALID_ARG;
-    }
-
     // Set initial state
     set_dir(motor, motor->target_direction);
     set_pwm(motor, motor->target_pwm);
 
     return ESP_OK;
-}
-
-// Add this ISR handler
-static void IRAM_ATTR fault_isr_handler(void *arg) {
-    // motor_handle_t *motor = (motor_handle_t *)arg;
-
-    // // Set fault flag
-    // motor->fault_active = true;
-
-    // // Turn on fault LED immediately from ISR
-    // gpio_set_level(motor->config.fault_led_gpio_num, 0);
-};
-
-bool motor_driver_is_fault_active(motor_handle_t *motor)
-{
-    if (motor == NULL)
-    {
-        return false;
-    }
-
-    return motor->fault_active;
-}
-
-esp_err_t motor_driver_clear_fault(motor_handle_t *motor)
-{
-    if (motor == NULL)
-    {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    // Only clear if fault is inactive at the GPIO level
-    if (gpio_get_level(motor->config.fault_gpio_num) == 0)
-    { // Assuming active low fault
-        motor->fault_active = false;
-        gpio_set_level(motor->config.fault_led_gpio_num, 1); // Turn off LED
-        return ESP_OK;
-    }
-    else
-    {
-        return ESP_ERR_INVALID_STATE; // Fault still active at hardware level
-    }
 }
 
 esp_err_t motor_driver_emergency_stop(motor_handle_t *motor)
@@ -334,11 +234,6 @@ esp_err_t motor_driver_update(motor_handle_t *motor)
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (motor->fault_active)
-    {
-        return ESP_ERR_INVALID_STATE;
-    }
-
     uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
     if (now - motor->last_update_ms >= motor->config.ramp_intervall_ms)
@@ -409,7 +304,6 @@ void motor_driver_print_all_parameters(motor_handle_t *motor)
     LOGI(TAG, "  Ramp Interval: %d ms", motor->config.ramp_intervall_ms);
     LOGI(TAG, "  Direction Hysteresis: %d", motor->config.direction_hysteresis);
     LOGI(TAG, "  PWM Duty Limit: %.2f", motor->config.pwm_duty_limit);
-    LOGI(TAG, "  Fault Active: %d", motor->fault_active);
     LOGI(TAG, "  Instance Number: %d", instance_nr);
     LOGI(TAG, "  Instance Counter: %d", instance_cntr);
     LOGI(TAG, "  Mynr: %d", motor->config.mynr);
@@ -428,8 +322,7 @@ esp_err_t motor_driver_deinit(motor_handle_t *motor)
     }
 
     motor_driver_emergency_stop(motor);
-
-    gpio_isr_handler_remove(motor->config.fault_gpio_num);
+    
     instance_cntr--;
 
     if (instance_cntr == 0)

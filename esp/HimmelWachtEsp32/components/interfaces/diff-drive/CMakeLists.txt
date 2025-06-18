@@ -1,6 +1,7 @@
 idf_component_register(SRCS "diff-drive.c"
                        INCLUDE_DIRS "include"
-                       REQUIRES motor-driver freertos driver utils)
+                       REQUIRES motor-driver freertos driver utils espressif__iqmath)
 
-# Enable logging only for this component ENABLE_DEBUG_LOGS
-target_compile_definitions(${COMPONENT_LIB} PRIVATE )
+# Loggin: ENABLE_DEBUG_LOGS
+# IQMath: GLOBAL_IQ=%value%, 24 default if not set
+target_compile_definitions(${COMPONENT_LIB} PRIVATE GLOBAL_IQ=15)

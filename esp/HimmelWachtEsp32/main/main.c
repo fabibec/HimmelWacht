@@ -24,13 +24,9 @@
 // Define GPIO pins for motors
 #define RIGHT_MOTOR_PWM_GPIO 23
 #define RIGHT_MOTOR_DIR_GPIO 22
-#define RIGHT_MOTOR_FAULT_GPIO 21
-#define RIGHT_MOTOR_FAULT_LED 3
 
 #define LEFT_MOTOR_PWM_GPIO 27
 #define LEFT_MOTOR_DIR_GPIO 26
-#define LEFT_MOTOR_FAULT_GPIO 25
-#define LEFT_MOTOR_FAULT_LED 32
 
 #define MAX_INPUT_VALUE 512
 
@@ -61,7 +57,7 @@ void app_main(void)
 
         // Configure MQTT component
     mqtt_config_t mqtt_config = {
-        .broker_uri = "mqtt://172.16.19.147:1883",  // Replace with your broker IP
+        .broker_uri = "mqtt://172.16.3.105:1883",  // Replace with your broker IP
         .topic = "vehicle/turret/cmd",               // Configurable topic
         .client_id = "esp32_vehicle_01",             // Unique client ID
         .keepalive = 60,                              // Keep alive interval
@@ -115,7 +111,7 @@ void app_main(void)
         .task_priority = 0,
         .task_stack_size = 4096,
         .task_core_id = 0,
-        .task_delay_ms = 80,
+        .task_delay_ms = 50,
         .queue_timout_ms = 10,
     };
 
@@ -127,8 +123,6 @@ void app_main(void)
         .pwm_signal = MCPWM0A,
         .pwm_gpio_num = LEFT_MOTOR_PWM_GPIO,
         .dir_gpio_num = LEFT_MOTOR_DIR_GPIO,
-        .fault_gpio_num = LEFT_MOTOR_FAULT_GPIO,
-        .fault_led_gpio_num = LEFT_MOTOR_FAULT_LED,
         .pwm_frequency_hz = 20000,
         .ramp_rate = 5,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
@@ -144,8 +138,6 @@ void app_main(void)
         .pwm_signal = MCPWM1A,
         .pwm_gpio_num = RIGHT_MOTOR_PWM_GPIO,
         .dir_gpio_num = RIGHT_MOTOR_DIR_GPIO,
-        .fault_gpio_num = RIGHT_MOTOR_FAULT_GPIO,
-        .fault_led_gpio_num = RIGHT_MOTOR_FAULT_LED,
         .pwm_frequency_hz = 20000,
         .ramp_rate = 5,            // Adjust as needed
         .ramp_intervall_ms = 10,   // Adjust as needed
