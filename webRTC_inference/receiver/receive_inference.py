@@ -17,6 +17,12 @@ from loguru import logger
 from aiortc import RTCPeerConnection, RTCConfiguration, RTCIceServer, RTCSessionDescription
 import logging
 
+# ************************************** SOURCES  **************************************
+# AioRTC <-> MediaMTX: https://github.com/bluenviron/mediamtx/discussions/3640
+# Ultralytics Inference: https://docs.ultralytics.com/de/tasks/detect/#predict
+# WebSocket API: https://websockets.readthedocs.io/en/stable/ + ChatGPT / Anthropics Claude AI
+# MQTT API: https://pypi.org/project/paho-mqtt/#description + ChatGPT / Anthropics Claude AI
+
 # ************************************** DOCUMENTATION **************************************
 # From x:0 y:48 (neutral) to upper / lower boundary it approx. takes y=16
 # From x:0 y:48 (neutral) to left boundary takes x=18
