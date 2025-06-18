@@ -17,6 +17,8 @@
 #include <esp_timer.h>
 
 #define VEHICLE_CONTROL_TAG "Vehicle Control"
+#define STICK_FILTER_ALPHA _IQ21(0.2)
+#define FILTERED_STICK_DEADZONE _IQ21(0.1)
 
 typedef enum{
     MANUAL_TURRET_CONTROL,
@@ -35,7 +37,7 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 #define DRIVING_NULL_BOUNDARY 75
 #define DRIVING_MIN_CHANGE 20
 
-static inline void process_fire(uint16_t r2_value);
+static inline void process_manual_fire(uint16_t r2_value);
 static inline void process_manual_platform_left_right(int16_t stickX);
 static inline void process_manual_platform_up_down(int16_t stickY);
 static inline void process_platform_left_right();
@@ -164,7 +166,7 @@ static void vehicle_control_task(void* arg) {
             process_manual_platform_up_down(platform_y_input);
         } else if(vehicle_state == AUTOMATIC_TURRET_CONTROL){
             mqtt_turret_cmd_t mqtt_cmd;
-            
+
             if(mqtt_stack_get_turret_command(&mqtt_cmd) == ESP_OK) {
                 // Update platform positions
                 platform_x_angle = mqtt_cmd.platform_x_angle;
@@ -172,7 +174,7 @@ static void vehicle_control_task(void* arg) {
 
                 process_platform_left_right();
                 process_platform_up_down();
-                
+
                 // Enhancement for full automatic control (already implemented in the MQTT stack and works):
                 // if(mqtt_cmd.fire_command) {
                 //     fire_control_trigger_shot();
@@ -183,7 +185,7 @@ static void vehicle_control_task(void* arg) {
         }
 
         platform_fire_input = ds4_current_state.rightTrigger;
-        process_fire(platform_fire_input);
+        process_manual_fire(platform_fire_input);
 
         set_vehicle_mode_color();
     }
@@ -192,18 +194,18 @@ static void vehicle_control_task(void* arg) {
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
     bool is_null_position = (abs(x) < DRIVING_NULL_BOUNDARY && abs(y) < DRIVING_NULL_BOUNDARY);
     bool significant_change = (abs(x - diff_drive_prev_x) >= DRIVING_MIN_CHANGE || abs(y - diff_drive_prev_y) >= DRIVING_MIN_CHANGE);
-    
+
     if (is_null_position) {
         if (null_pos_done) {
             return;
         }
-        
+
         null_pos_done = 1;
         x = 0;
         y = 0;
     } else {
         null_pos_done = 0;
-        
+
         // Skip update if change is too small
         if (!significant_change) {
             return;
@@ -249,11 +251,25 @@ static inline void process_manual_platform_left_right(int16_t stickX){
         The speed is then used to calculate the new angle of the platform.
     */
     _iq21 normalized_stickX = _IQ21div(_IQ21(stickX), _IQ21(512));
-    _iq21 speed = _IQ21mpy(normalized_stickX, max_deg_per_sec_x);
+
+    static _iq21 filtered_stickX = 0;
+    if (stickX == 0) {
+        filtered_stickX = 0;
+    } else {
+        // Low-pass filter
+        filtered_stickX = _IQ21mpy(STICK_FILTER_ALPHA, normalized_stickX) +
+                      _IQ21mpy(_IQ21(1.0) - STICK_FILTER_ALPHA, filtered_stickX);
+
+        // Ignore tiny filtered input
+        if (_IQ21abs(filtered_stickX) < FILTERED_STICK_DEADZONE) {
+            filtered_stickX = 0;
+        }
+    }
+
+    _iq21 speed = _IQ21mpy(filtered_stickX, max_deg_per_sec_x);
     platform_x_angle -= _IQ21mpy(speed, dt) >> 21;
 
     process_platform_left_right();
-
 }
 
 static inline void process_platform_left_right(){
@@ -279,8 +295,23 @@ static inline void process_manual_platform_up_down(int16_t stickY){
         The speed is then used to calculate the new angle of the platform.
     */
     _iq21 normalized_stickY = _IQ21div(_IQ21(stickY), _IQ21(512));
-    _iq21 speed = _IQ21mpy(normalized_stickY, max_deg_per_sec_y);
-    platform_y_angle -= _IQ21mpy(speed, dt) >> 21;
+
+    static _iq21 filtered_stickY = 0;
+    if (stickY == 0) {
+        filtered_stickY = 0;
+    } else {
+        // Low-pass filter
+        filtered_stickY = _IQ21mpy(STICK_FILTER_ALPHA, normalized_stickY) +
+                      _IQ21mpy(_IQ21(1.0) - STICK_FILTER_ALPHA, filtered_stickY);
+
+        // Ignore tiny filtered input
+        if (_IQ21abs(filtered_stickY) < FILTERED_STICK_DEADZONE) {
+            filtered_stickY = 0;
+        }
+    }
+
+    _iq21 speed = _IQ21mpy(filtered_stickY, max_deg_per_sec_y);
+    platform_y_angle += _IQ21mpy(speed, dt) >> 21;
 
     process_platform_up_down();
 }

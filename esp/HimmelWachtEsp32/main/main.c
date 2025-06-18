@@ -65,7 +65,7 @@ void app_main(void)
         .reconnect_timeout_ms = 5000,       // Reconnect timeout in milliseconds
         .queue_timeout_ticks = 10,                // Queue timeout in ticks
     };
-    
+
     // Initialize MQTT component
     ret = mqtt_stack_init(&mqtt_config);
     if (ret != ESP_OK) {
@@ -89,7 +89,7 @@ void app_main(void)
         .platform_x_left_stop_angle = -90,
         .platform_x_right_stop_angle = 90,
         .platform_y_channel = 1,
-        .platform_y_start_angle = 47,
+        .platform_y_start_angle = 48,
         .platform_y_left_stop_angle = 0,
         .platform_y_right_stop_angle = 80};
 
