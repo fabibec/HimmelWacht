@@ -1,0 +1,1 @@
+index.html needs to be started on raspberry pi with **python3 -m http.server 8000**
