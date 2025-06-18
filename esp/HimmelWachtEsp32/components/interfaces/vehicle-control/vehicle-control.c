@@ -35,7 +35,7 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 #define DRIVING_NULL_BOUNDARY 75
 #define DRIVING_MIN_CHANGE 20
 
-static inline void process_manual_fire(uint16_t r2_value);
+static inline void process_fire(uint16_t r2_value);
 static inline void process_manual_platform_left_right(int16_t stickX);
 static inline void process_manual_platform_up_down(int16_t stickY);
 static inline void process_platform_left_right();
@@ -159,11 +159,9 @@ static void vehicle_control_task(void* arg) {
 
             platform_x_input = ds4_current_state.rightStickX;
             platform_y_input = ds4_current_state.rightStickY;
-            platform_fire_input = ds4_current_state.rightTrigger;
 
             process_manual_platform_left_right(platform_x_input);
             process_manual_platform_up_down(platform_y_input);
-            process_manual_fire(platform_fire_input);
         } else if(vehicle_state == AUTOMATIC_TURRET_CONTROL){
             mqtt_turret_cmd_t mqtt_cmd;
             
@@ -175,13 +173,17 @@ static void vehicle_control_task(void* arg) {
                 process_platform_left_right();
                 process_platform_up_down();
                 
-                if(mqtt_cmd.fire_command) {
-                    fire_control_trigger_shot();
-                }
+                // Enhancement for full automatic control (already implemented in the MQTT stack and works):
+                // if(mqtt_cmd.fire_command) {
+                //     fire_control_trigger_shot();
+                // }
             } else {
                 // stay in position
             }
         }
+
+        platform_fire_input = ds4_current_state.rightTrigger;
+        process_fire(platform_fire_input);
 
         set_vehicle_mode_color();
     }
