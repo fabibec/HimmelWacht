@@ -11,10 +11,16 @@
 
 #define MOTOR_TASK_NAME "motor_task"
 
-// Forward declarations
+motor_handle_t *motor_driver_init(const motor_config_t *config);
+static esp_err_t init_motor(motor_handle_t *motor, const motor_config_t *config);
+esp_err_t motor_driver_emergency_stop(motor_handle_t *motor);
+inline bool motor_driver_is_update_necessary(motor_handle_t *motor);
+esp_err_t motor_driver_set_speed(motor_handle_t *motor, float duty_cycle, motor_direction_t direction);
 static esp_err_t set_pwm(motor_handle_t *motor, float duty_cycle);
 static esp_err_t set_dir(motor_handle_t *motor, motor_direction_t direction);
-static esp_err_t init_motor(motor_handle_t *motor, const motor_config_t *config);
+esp_err_t motor_driver_update(motor_handle_t *motor);
+void motor_driver_print_all_parameters(motor_handle_t *motor);
+esp_err_t motor_driver_deinit(motor_handle_t *motor);
 
 static uint8_t instance_cntr = 0;
 uint8_t instance_nr = 0;
@@ -324,11 +330,6 @@ esp_err_t motor_driver_deinit(motor_handle_t *motor)
     motor_driver_emergency_stop(motor);
     
     instance_cntr--;
-
-    if (instance_cntr == 0)
-    {
-        gpio_uninstall_isr_service();
-    }
 
     free(motor);
     motor = NULL;
