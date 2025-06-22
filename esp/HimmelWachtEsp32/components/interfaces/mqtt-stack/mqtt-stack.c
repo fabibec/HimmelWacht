@@ -12,28 +12,23 @@
 
 static const char *TAG = "MQTT_STACK";
 
-// MQTT client handle
+static void set_connection_status(bool connected);
+static bool get_connection_status(void);
+static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd_t *cmd);
+static void stack_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
+static void destroy(void);
+static esp_err_t start(void);
+esp_err_t mqtt_stack_init(const mqtt_config_t *config);
+esp_err_t mqtt_stack_deinit(void);
+esp_err_t mqtt_stack_get_turret_command(mqtt_turret_cmd_t *cmd);
+bool mqtt_stack_is_connected(void);
+
 static esp_mqtt_client_handle_t mqtt_client = NULL;
-
-// Queue for turret commands
 static QueueHandle_t turret_cmd_queue = NULL;
-
-// MQTT configuration storage
 static mqtt_config_t mqtt_cfg;
-
-// Connection status
 static bool mqtt_connected = false;
 static SemaphoreHandle_t connection_mutex = NULL;
 
-// Function prototypes
-static void set_connection_status(bool connected);
-static bool get_connection_status(void);
-esp_err_t start(void);
-static void stack_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
-static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd_t *cmd);
-void destroy(void);
-
-// Function to set connection status safely
 static void set_connection_status(bool connected) {
     if (connection_mutex) {
         xSemaphoreTake(connection_mutex, portMAX_DELAY);
@@ -42,7 +37,6 @@ static void set_connection_status(bool connected) {
     }
 }
 
-// Function to get connection status safely
 static bool get_connection_status(void) {
     bool status = false;
     if (connection_mutex) {
@@ -53,7 +47,6 @@ static bool get_connection_status(void) {
     return status;
 }
 
-// Parse JSON message and extract turret command
 static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd_t *cmd) {
     cJSON *json = cJSON_ParseWithLength(data, data_len);
     if (json == NULL) {
@@ -94,7 +87,6 @@ static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd
     return success;
 }
 
-// MQTT event handler
 static void stack_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
     esp_mqtt_event_handle_t event = event_data;
     
@@ -160,17 +152,14 @@ esp_err_t mqtt_stack_init(const mqtt_config_t *config) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    // Copy configuration
     memcpy(&mqtt_cfg, config, sizeof(mqtt_config_t));
 
-    // Create connection mutex
     connection_mutex = xSemaphoreCreateMutex();
     if (connection_mutex == NULL) {
         ESP_LOGE(TAG, "Failed to create connection mutex");
         return ESP_ERR_NO_MEM;
     }
 
-    // Create turret command queue (capacity of 5 commands)
     turret_cmd_queue = xQueueCreate(5, sizeof(mqtt_turret_cmd_t));
     if (turret_cmd_queue == NULL) {
         ESP_LOGE(TAG, "Failed to create turret command queue");
@@ -178,7 +167,6 @@ esp_err_t mqtt_stack_init(const mqtt_config_t *config) {
         return ESP_ERR_NO_MEM;
     }
 
-    // Configure MQTT client
     esp_mqtt_client_config_t mqtt_config = {
         .broker.address.uri = mqtt_cfg.broker_uri,
         .session.keepalive = mqtt_cfg.keepalive,
@@ -265,7 +253,6 @@ esp_err_t mqtt_stack_get_turret_command(mqtt_turret_cmd_t *cmd) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    //pdMS_TO_TICKS    
     if (xQueueReceive(turret_cmd_queue, cmd, mqtt_cfg.queue_timeout_ticks) == pdTRUE) {
         return ESP_OK;
     } else {
