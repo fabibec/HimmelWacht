@@ -1,3 +1,17 @@
+/**
+ * @file diff-drive.h
+ * @brief Differential drive interface for controlling two motors
+ * 
+ * This header file defines the differential drive interface for controlling two motors
+ * using a queue for command handling. It includes the necessary structures, function declarations,
+ * and configuration options.
+ * 
+ * Reference:
+ *  - https://components.espressif.com/components/espressif/iqmath
+ * 
+ * @author Michael Specht
+ */
+
 #pragma once
 
 #include "freertos/FreeRTOS.h"
