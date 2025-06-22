@@ -70,17 +70,18 @@ typedef struct {
 static ButtonHoldState platform_angle_reset_button_state = {0};
 static ButtonHoldState vehicle_mode_change_button_state = {0};
 
-/*
-    Reset the platform angles to the starting position
-
-    @author Fabian Becker
-*/
+/**
+ * @author Fabian Becker
+ */
 static inline void reset_platform_angles(void) {
     platform_x_to_start(&platform_x_angle);
     platform_y_to_start(&platform_y_angle);
     ds4_rumble(0, 100, 0xF0, 0xF0);
 }
 
+/**
+ * @author Fabian Becker
+ */
 static inline void set_vehicle_mode_color(void) {
     if(vehicle_state == MANUAL_TURRET_CONTROL){
         ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
@@ -89,11 +90,9 @@ static inline void set_vehicle_mode_color(void) {
     }
 }
 
-/*
-    Change the vehicle mode between manual and automatic turret control
-
-    @author Fabian Becker
-*/
+/**
+ * @author Fabian Becker
+ */
 static inline void change_vehicle_mode(void) {
     if(vehicle_state == MANUAL_TURRET_CONTROL){
         vehicle_state = AUTOMATIC_TURRET_CONTROL;
@@ -107,6 +106,9 @@ static inline void change_vehicle_mode(void) {
     ds4_rumble(0, 100, 0xF0, 0xF0);
 }
 
+/**
+ * @author Fabian Becker
+ */
 static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
     if (is_pressed) {
         if (!button->is_held) {
@@ -133,6 +135,9 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
     return false;
 }
 
+/**
+ * @author Fabian Becker, Michael Specht
+ */
 static void vehicle_control_task(void* arg) {
     diff_drive_handle_t *diff_drive = (diff_drive_handle_t *)arg;
     static ds4_input_t ds4_current_state;
@@ -191,6 +196,9 @@ static void vehicle_control_task(void* arg) {
     }
 }
 
+/**
+ * @author Michael Specht
+ */
 static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int16_t y){
     bool is_null_position = (abs(x) < DRIVING_NULL_BOUNDARY && abs(y) < DRIVING_NULL_BOUNDARY);
     bool significant_change = (abs(x - diff_drive_prev_x) >= DRIVING_MIN_CHANGE || abs(y - diff_drive_prev_y) >= DRIVING_MIN_CHANGE);
@@ -227,6 +235,9 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
     }
 }
 
+/**
+ * @author Fabian Becker
+ */
 static inline void process_manual_fire(uint16_t r2_value){
     static bool r2_was_pressed = false;
     const uint16_t R2_THRESHOLD = 800;
@@ -239,6 +250,9 @@ static inline void process_manual_fire(uint16_t r2_value){
     }
 }
 
+/**
+ * @author Fabian Becker
+ */
 static inline void process_manual_platform_left_right(int16_t stickX){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
     if(abs(stickX) < deadzone_x) {
@@ -272,6 +286,9 @@ static inline void process_manual_platform_left_right(int16_t stickX){
     process_platform_left_right();
 }
 
+/**
+ * @author Fabian Becker
+ */
 static inline void process_platform_left_right(){
     int8_t set_angle = 0;
     platform_x_set_angle(platform_x_angle, &set_angle);
@@ -283,6 +300,9 @@ static inline void process_platform_left_right(){
     }
 }
 
+/**
+ * @author Fabian Becker
+ */
 static inline void process_manual_platform_up_down(int16_t stickY){
     // Older controllers have stick drift and therefore small deviations from 0 need to be ignored
     if(abs(stickY) < deadzone_y) {
@@ -316,6 +336,9 @@ static inline void process_manual_platform_up_down(int16_t stickY){
     process_platform_up_down();
 }
 
+/**
+ * @author Fabian Becker
+ */
 static inline void process_platform_up_down(){
     int8_t set_angle = 0;
     platform_y_set_angle(platform_y_angle, &set_angle);
@@ -327,6 +350,9 @@ static inline void process_platform_up_down(){
     }
 }
 
+/**
+ * @author Fabian Becker
+ */
 esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
     const char* TAG = "Init";
 
