@@ -1,29 +1,27 @@
 #include "wifi-stack.h"
-
 #include <inttypes.h>
 #include <string.h>
-
 #include "freertos/event_groups.h"
 #include "esp_netif_net_stack.h"
 #include "esp_bit_defs.h"
 
 #define TAG "tutorial"
-
 #define WIFI_AUTHMODE WIFI_AUTH_WPA2_PSK
-
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
 
+static void ip_event_cb(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+static void wifi_event_cb(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+static esp_err_t connect(char* wifi_ssid, char* wifi_password);
+esp_err_t wifi_stack_init(char* wifi_ssid, char* wifi_password);
+esp_err_t wifi_stack_deinit(void);
+
 static const int WIFI_RETRY_ATTEMPT = 3;
 static int wifi_retry_count = 0;
-
 static esp_netif_t *tutorial_netif = NULL;
 static esp_event_handler_instance_t ip_event_handler;
 static esp_event_handler_instance_t wifi_event_handler;
-
 static EventGroupHandle_t s_wifi_event_group = NULL;
-
-esp_err_t connect(char* wifi_ssid, char* wifi_password);
 
 static void ip_event_cb(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
