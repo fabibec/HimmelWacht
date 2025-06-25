@@ -27,8 +27,21 @@ static esp_mqtt_client_handle_t mqtt_client = NULL;
 static QueueHandle_t turret_cmd_queue = NULL;
 static mqtt_config_t mqtt_cfg;
 static bool mqtt_connected = false;
+static bool discard_commands = true;
 static SemaphoreHandle_t connection_mutex = NULL;
+static SemaphoreHandle_t discard_command_mutex = NULL;
 
+// Function prototypes
+static void set_connection_status(bool connected);
+static bool get_connection_status(void);
+void set_discard_command_status(bool connected);
+bool get_discard_command_status(void);
+esp_err_t start(void);
+static void stack_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
+static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd_t *cmd);
+void destroy(void);
+
+// Function to set connection status safely
 static void set_connection_status(bool connected) {
     if (connection_mutex) {
         xSemaphoreTake(connection_mutex, portMAX_DELAY);
@@ -47,6 +60,29 @@ static bool get_connection_status(void) {
     return status;
 }
 
+void set_discard_command_status(bool discard) {
+    if (discard_command_mutex) {
+        xSemaphoreTake(discard_command_mutex, portMAX_DELAY);
+        discard_commands = discard;
+        if(turret_cmd_queue != NULL) {
+            xQueueReset(turret_cmd_queue);
+            ESP_LOGI(TAG, "Turret command queue reset due to discard command status change");
+        }
+        xSemaphoreGive(discard_command_mutex);
+    }
+}
+
+bool get_discard_command_status(void) {
+    bool status = false;
+    if (discard_command_mutex) {
+        xSemaphoreTake(discard_command_mutex, portMAX_DELAY);
+        status = discard_commands;
+        xSemaphoreGive(discard_command_mutex);
+    }
+    return status;
+}
+
+// Parse JSON message and extract turret command
 static bool parse_turret_command(const char *data, int data_len, mqtt_turret_cmd_t *cmd) {
     cJSON *json = cJSON_ParseWithLength(data, data_len);
     if (json == NULL) {
@@ -121,6 +157,13 @@ static void stack_event_handler(void *handler_args, esp_event_base_t base, int32
             LOGI(TAG, "MQTT_EVENT_DATA");
             LOGI(TAG, "TOPIC=%.*s", event->topic_len, event->topic);
             LOGI(TAG, "DATA=%.*s", event->data_len, event->data);
+
+            if(get_discard_command_status()) {
+                LOGI(TAG, "Discarding command due to discard_commands flag");
+                break;
+            }else{
+                LOGI(TAG, "Processing command");
+            }
             
             // Parse and queue the turret command
             if (turret_cmd_queue != NULL) {
@@ -160,10 +203,20 @@ esp_err_t mqtt_stack_init(const mqtt_config_t *config) {
         return ESP_ERR_NO_MEM;
     }
 
+    // Create discard command mutex
+    discard_command_mutex = xSemaphoreCreateMutex();
+    if (discard_command_mutex == NULL) {
+        ESP_LOGE(TAG, "Failed to create discard command mutex");
+        vSemaphoreDelete(connection_mutex);
+        return ESP_ERR_NO_MEM;
+    }
+
+    // Create turret command queue (capacity of 5 commands)
     turret_cmd_queue = xQueueCreate(5, sizeof(mqtt_turret_cmd_t));
     if (turret_cmd_queue == NULL) {
         ESP_LOGE(TAG, "Failed to create turret command queue");
         vSemaphoreDelete(connection_mutex);
+        vSemaphoreDelete(discard_command_mutex);
         return ESP_ERR_NO_MEM;
     }
 
