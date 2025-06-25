@@ -1,8 +1,7 @@
 import asyncio
-
-async def gyro_data():
+async def ultrasonic_data():
     process = await asyncio.create_subprocess_exec(
-        "../sensors/gyro-filter/gyro_kalman",
+        "../sensors/ultraschall/ultraschall",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL
     )
@@ -14,7 +13,7 @@ async def gyro_data():
                 print("Subprocess closed stdout")
                 break
             decoded = line.decode().strip()
-            print(f"gyro output: {decoded}")
+            print(f"Ultrasonic output: {decoded}")
             yield decoded
     finally:
         process.kill()
