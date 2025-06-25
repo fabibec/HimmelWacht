@@ -241,6 +241,9 @@ esp_err_t platform_set_angle(uint8_t channel, int8_t angle, int8_t* result){
     return pca9685_set_pwm_on_off(channel, 0, off_period);
 }
 
+/**
+ * @author Michael Specht
+ */
 esp_err_t platform_reset(int8_t* result_x, int8_t* result_y){
     esp_err_t ret_x = platform_x_to_start(result_x);
     esp_err_t ret_y = platform_y_to_start(result_y);
