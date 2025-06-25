@@ -66,5 +66,21 @@ esp_err_t mqtt_stack_get_turret_command(mqtt_turret_cmd_t *cmd);
  */
 bool mqtt_stack_is_connected(void);
 
+/**
+ * @brief Set the status of the discard command
+ *
+ * This function is used to set the status of the discard command, which indicates whether
+ * the turret should ignore incoming commands. Active in manual mode, inactive in semi automatic mode.
+ * Thread-safe via Semaphore.
+ *
+ * @param connected true to set discard command active, false to deactivate
+ */
 void set_discard_command_status(bool connected);
+
+/**
+ * @brief Get the status of the discard command
+ * Thread-safe via Semaphore.
+ *
+ * @return true if discard command is active, false otherwise
+ */
 bool get_discard_command_status(void);
