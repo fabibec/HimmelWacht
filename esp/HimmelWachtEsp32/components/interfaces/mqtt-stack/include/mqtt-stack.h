@@ -53,3 +53,6 @@ esp_err_t mqtt_stack_get_turret_command(mqtt_turret_cmd_t *cmd);
  * @return true if connected, false otherwise
  */
 bool mqtt_stack_is_connected(void);
+
+void set_discard_command_status(bool connected);
+bool get_discard_command_status(void);

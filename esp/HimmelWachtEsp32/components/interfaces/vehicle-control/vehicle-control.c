@@ -96,10 +96,13 @@ static inline void set_vehicle_mode_color(void) {
 */
 static inline void change_vehicle_mode(void) {
     if(vehicle_state == MANUAL_TURRET_CONTROL){
+        // turn on command receive in mqtt
+        set_discard_command_status(false);
         vehicle_state = AUTOMATIC_TURRET_CONTROL;
         //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         platform_reset(&platform_x_angle, &platform_y_angle);
     } else {
+        set_discard_command_status(true);
         //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         vehicle_state = MANUAL_TURRET_CONTROL;
     }
