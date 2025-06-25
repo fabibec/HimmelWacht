@@ -190,6 +190,8 @@ static void vehicle_control_task(void* arg) {
         platform_fire_input = ds4_current_state.rightTrigger;
         process_manual_fire(platform_fire_input);
 
+        // Set the proper lightbar color based on the current vehicle mode
+        // This is done here to ensure the color is set after the controller reconnects
         set_vehicle_mode_color();
     }
 }
