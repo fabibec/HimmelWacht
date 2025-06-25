@@ -8,19 +8,25 @@
 
 #define TAG "DIFF_DRIVE"
 
+diff_drive_handle_t *diff_drive_init(const diff_drive_config_t *config, const motor_config_t *left_motor_config, const motor_config_t *right_motor_config);
+esp_err_t create_task(diff_drive_handle_t *handle, uint8_t priority);
+esp_err_t diff_drive_send_cmd(diff_drive_handle_t *diff_drive, input_matrix_t *matrix);
+esp_err_t diff_drive_update(diff_drive_handle_t *diff_drive);
+esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive);
+void diff_drive_print_all_parameters(diff_drive_handle_t *diff_drive);
+static void diff_drive_task(void *pvParameters);
+static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input,
+                             float *left_limit, float *right_limit,
+                             float *left_speed, float *right_speed,
+                             motor_direction_t *left_dir, motor_direction_t *right_dir);
+
 typedef struct diff_drive_cmd
 {
-    float left_speed;            // Left motor speed (0-100)
-    float right_speed;           // Right motor speed (0-100)
-    motor_direction_t left_dir;  // Left motor direction
-    motor_direction_t right_dir; // Right motor direction
+    float left_speed;
+    float right_speed;
+    motor_direction_t left_dir;
+    motor_direction_t right_dir;
 } diff_drive_cmd_t;
-
-// Helper function to calculate motor speeds from x, y inputs
-static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, float *left_limit, float *right_limit, float *left_speed, float *right_speed,
-                             motor_direction_t *left_dir, motor_direction_t *right_dir);
-esp_err_t create_task(diff_drive_handle_t *handle, uint8_t priority);
-static void diff_drive_task(void *pvParameters);
 
 diff_drive_handle_t *diff_drive_init(const diff_drive_config_t *config, const motor_config_t *left_motor_config, const motor_config_t *right_motor_config)
 {
@@ -209,7 +215,7 @@ static void diff_drive_task(void *pvParameters)
 
             // Log command
             ESP_LOGI(TAG, "Command received: left_speed=%.2f, right_speed=%.2f, left_dir=%d, right_dir=%d",
-                 cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
+                     cmd.left_speed, cmd.right_speed, cmd.left_dir, cmd.right_dir);
         }
 
         // Update motors
@@ -253,10 +259,10 @@ esp_err_t diff_drive_deinit(diff_drive_handle_t *diff_drive)
     return ESP_OK;
 }
 
-static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input, 
-                               float *left_limit, float *right_limit, 
-                               float *left_speed, float *right_speed,
-                               motor_direction_t *left_dir, motor_direction_t *right_dir)
+static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input,
+                             float *left_limit, float *right_limit,
+                             float *left_speed, float *right_speed,
+                             motor_direction_t *left_dir, motor_direction_t *right_dir)
 {
     // Convert constants to IQ format
     const _iq IQ_ZERO = _IQ(0.0);
@@ -266,11 +272,11 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input,
     const _iq IQ_SHARP_TURN_THRESHOLD = _IQ(0.7);
     const _iq IQ_HUNDRED = _IQ(100.0);
     const _iq IQ_FIFTY = _IQ(50.0);
-    
+
     // Convert float inputs to IQ format
     _iq left_limit_iq = _IQ(*left_limit);
     _iq right_limit_iq = _IQ(*right_limit);
-    
+
     // Check stop condition
     if (x == 0 && y == 0)
     {
@@ -283,7 +289,7 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input,
 
     // Convert max_input to IQ format
     _iq max_input_iq = _IQ((float)*max_input);
-    
+
     // Normalize inputs to -1.0 to 1.0 range
     _iq h_norm = _IQdiv(_IQ((float)x), max_input_iq);
     _iq v_norm = _IQdiv(_IQ((float)y), max_input_iq);
@@ -306,7 +312,7 @@ static void calculate_speeds(int16_t x, int16_t y, int16_t *max_input,
     {
         h_norm = IQ_ZERO;
     }
-    
+
     // Handle straight left and right movement for in place rotation (deadband)
     if (_IQabs(v_norm) < IQ_DEADBAND)
     {
