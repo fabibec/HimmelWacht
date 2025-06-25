@@ -1,0 +1,36 @@
+{
+    "files.associations": {
+        "bluetooth.h": "c",
+        "uni_bt_service.h": "c",
+        "btstack_config.h": "c",
+        "esp_timer.h": "c",
+        "stdint.h": "c",
+        "portmacro.h": "c",
+        "freertos.h": "c",
+        "stdbool.h": "c",
+        "*.tcc": "c",
+        "charconv": "c",
+        "chrono": "c",
+        "optional": "c",
+        "format": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "regex": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "btstack_stdio_esp32.h": "c",
+        "i2c_master.h": "c",
+        "esp_mac.h": "c",
+        "cmath": "c",
+        "complex": "c",
+        "clk_tree_defs.h": "c",
+        "i2c_types.h": "c",
+        "uni.h": "c"
+    },
+    "editor.codeActionsOnSave": {
+        "source.sortImports": "always"
+    }
+}
