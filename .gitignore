@@ -1,5 +1,7 @@
 # Ignore DS_Store files from MAC
 .DS_Store
+
+# Ignore FreeCAD Temp Files
 **/*.FCBak
 
 ## Core latex/pdflatex auxiliary files:
