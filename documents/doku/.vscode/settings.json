@@ -1,0 +1,18 @@
+{
+  "latex-workshop.latex.tools": [
+    {
+      "name": "make",
+      "command": "make",
+      "args": ["all"],
+      "env": {}
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "Makefile",
+      "tools": ["make"]
+    }
+  ],
+  "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.latex.autoBuild.run": "onFileChange",
+}

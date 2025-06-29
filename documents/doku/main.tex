@@ -16,6 +16,7 @@
 \usepackage{chngcntr} % For changing counter settings
 \usepackage{fancyhdr} % For custom headers and footers
 \usepackage[style=ieee,backend=biber,url=true]{biblatex}
+\addbibresource{shared/references.bib} 
 \usepackage{float}
 \usepackage{titling}
 \usepackage{svg}
@@ -72,15 +73,15 @@
 \begin{document}
 
 % Title Page
-\input{cover.tex}
+\input{src/shared/cover.tex}
 
 % Table of Contents
 \tableofcontents
 \newpage
 
 % Main Content
-\input{cad_michi.tex}
-\input{esp32_michi.tex}
+\input{src/specht/cad.tex}
+\input{src/specht/esp32.tex}
 
 %\input{gnn}
 %\input{p5p}
@@ -90,7 +91,7 @@
 % \includepdf[pages=-]{Stundenliste_Fabian_Becker.pdf}
 % \includepdf[pages=-]{Stundenliste_Nicolas_Koch.pdf}
 % \includepdf[pages=-]{Stundenliste_Jendrik_Jürgens.pdf}
-\includepdf[pages=-]{stundenlisten/Stundenliste_Michael_Specht.pdf}
+\includepdf[pages=-]{pdfs/Stundenliste_Michael_Specht.pdf}
 % \includepdf[pages=-]{Stundenliste_Jonathan_Wohlrab.pdf}
 
 % List of Figures
