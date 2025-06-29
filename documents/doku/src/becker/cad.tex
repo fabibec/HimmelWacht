@@ -1,0 +1,60 @@
+\section{Geschützplattform (Becker)}
+
+Als Geschützplattform wird im folgenden der Unterbau des Geschützes bezeichnet,
+welcher den Geschützarm mit der Lochplatte des Fahrzeugs verbindet. Diese Plattform besteht
+aus zwei Teilen, beide sind 3D-gedruckt. 
+
+Der erste Teil ist der Unterbau, eine zylindrische Form mit einer 
+Bodenplatte, die Schraublöcher besitzt, um den Aufbau mit dem Fahrzeug 
+zu verbinden. Diesen Teil haben wir aus dem vorherigen Projekt übernommen, da 
+die Konstruktion bereits auf dem Fahrzeug verbaut war und eine Eigenkonstruktion
+ähnlich aussehen würde. Der Unterbau ist so konstruiert, dass er Platz für eine
+PCA9685 PWM-Treiberplatine bietet, die für die Ansteuerung der Servo Motoren verwendet wird.
+Für die Befestigung der Platine waren ebenfalls bereits Bohrlöcher vorhanden. Zusätzlich bietet
+der Unterbau Platz für einen MG996R Servo Motor, der für die Drehung des darüberliegenden
+Aufbaus verantwortlich ist.
+
+Der zweite Teil besteht aus der Abdeckung
+des Unterbaus, diese besitzt zum einen Bohrlöcher für die Verbindung des Servo Motors,
+welcher im Unterbau positioniert ist, und zum anderen Bohrlöcher für die Verbindung mittels
+des Geschützarms. Auch diese Abdeckung war bereits gegeben, jedoch wurde sie vermessen und
+in FreeCAD rekonstruiert, um die Bohrlöcher für die Verbindung mit dem Geschütz so zu setzen,
+dass das Verbindugnsstück und das Magazin ohne weitere Anpassungen montiert werden konnte.
+
+\section{Magazin und Verbindungsstück (Becker)}
+
+Sowohl das Magazin als auch das Verbindungsstück wurden auf Basis einer Vorlage gedruckt. 
+
+Das Verbindungsstück besitzt Platz für einen weiteren MG996R Servo Motor, der für die Neigung 
+des Geschützes verantwortlich ist. 
+
+Das Magazin bestand aus einem linken und einem rechten Teil, welche in der Vorlage zusammengeklebt wurden.
+Wie bereits im Abschnitt <Geschützarm> beschrieben, wurde für die Verbindung mit dem Geschützarm
+der ersten Version Verbindungsstücke an beide Teile des Magazins gedruckt, um mittles Schrauben beide Teile
+verbinden zu können. Zusätzlich wurden Schraublöcher an beide Teile des Magazins konstruiert, um auch diese mittels Schrauben zusammenzufügen.
+Mit der zweiten Version des Geschützarmes wurden die Verbindungsstücke entfernt, da der Geschützarm nun an das Magazin geklebt wurde.
+Grund für diese Änderung war, dass es aufgrund der deutlich kleineren Dimension des Geschützarmes nicht möglich war Verdbindungsstücke mit Schraublöchern
+zu konstruieren. 
+
+Zuletzt wurde auch die Länge des Lauf etwas vergrößert, um den Geschützarm besser stützen zu können.
+
+\section{Magazingewicht (Becker)}
+
+Das Magazin des Geschützes besitzt Platz für 6 Nerf-Darts und ein Magazingewicht, welches sowohl dafür sorgen soll, 
+dass die Darts bei großer Vibration des Fahrzeugs nicht aus dem Magazin fallen, als auch dafür, dass nach einem Schuss das 
+nächste Geschoss nachrutschen kann. 
+
+In einem ersten Schritt wurde die Vorlage für das Magazingewicht angepasst, indem der Projektname eingraviert wurde.
+
+Das Gewicht besitzt außerdem eine Aussparung, diese Verhindert dass das Gewicht die Bewegung des Servo Motors einschränkt, welcher die Darts
+bei der Schussabgabe in die Flywheel Motoren befördert. Ohne dieses Loch würde der Servo versuchen, das Gewicht in den Lauf zu schieben,
+was zu Materialschäden, entweder am Motor oder am Geschütz führen würde.
+
+Diese Aussparungs führte allerdings zu Problemen. Wenn die Platform sehr weit nach
+hinten geneigt wurde, konnte es passieren, dass der hintere Teil des Gewichts nicht mehr schwer genug war, um die Nerfs-Darts
+in den Lauf zu drücken. Dieses Problem wurden mit selektiven Infill gelöst, alle anderen Teil wurden standardmäßig mit 15\% Infill gedruckt,
+im hinteren Teil des Gewichts wurden jedoch mit 100\% Infill verwendet. Dieses Vorgehen führte dazu dass das vorher erläuterte Problem nicht mehr auftrat.
+
+\section{Halterungen Stormversorgung (Becker)}
+
+\section{Mikrocontroller-Case (Becker)}
