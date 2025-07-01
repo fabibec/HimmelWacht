@@ -1,0 +1,13 @@
+# Without Dataset this is just for sake of completeness
+# Dataset configuration file for YOLOv5/v8 segmentation
+
+
+train: /mnt/c/Users/jendr/Desktop/segmentation_data/dataset/train  # Path to training images
+val: /mnt/c/Users/jendr/Desktop/segmentation_data/dataset/val   # Path to validation images
+test: /mnt/c/Users/jendr/Desktop/segmentation_data/dataset/test  # Path to test images
+
+# Number of classes
+nc: 1  
+
+# Class names
+names: ['Plane']  # 
