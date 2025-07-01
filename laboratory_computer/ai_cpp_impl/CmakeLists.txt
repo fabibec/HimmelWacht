@@ -1,0 +1,41 @@
+# CMakeList.txt: CMake-Projekt für "img_seg". Schließen Sie die Quelle ein, und definieren Sie
+# projektspezifische Logik hier.
+#
+cmake_minimum_required (VERSION 3.12)
+
+project ("img_seg")
+
+
+set(OPENCV_DIR "${CMAKE_SOURCE_DIR}/external/opencv/opencv/build/install")
+
+# Set OpenCV paths manually
+set(OpenCV_INCLUDE_DIR "${OPENCV_DIR}/include")
+set(OpenCV_LIB_DIR "${OPENCV_DIR}/x64/vc16/lib")
+
+set(ONNX_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/external/onnx/onnxruntime-win-x64-gpu-1.21.0/include")
+set(ONNX_LIB_DIR "${CMAKE_SOURCE_DIR}/external/onnx/onnxruntime-win-x64-gpu-1.21.0/lib")
+
+# List the required OpenCV libraries (.lib files, NOT .dll)
+set(OpenCV_LIBS
+    opencv_core4110.lib
+    opencv_highgui4110.lib
+    opencv_videoio4110.lib
+    opencv_imgproc4110.lib
+)
+
+set(ONNX_LIBS
+    onnxruntime.lib
+)
+
+# Add your test source file
+add_executable(seg img_seg.cpp)
+
+# Include OpenCV headers
+target_include_directories(seg PRIVATE 
+                            ${OpenCV_INCLUDE_DIR} 
+                            ${ONNX_INCLUDE_DIR}
+)
+
+# Link OpenCV libraries
+target_link_directories(seg PRIVATE ${OpenCV_LIB_DIR} ${ONNX_LIB_DIR})
+target_link_libraries(seg PRIVATE ${OpenCV_LIBS} ${ONNX_LIBS})
