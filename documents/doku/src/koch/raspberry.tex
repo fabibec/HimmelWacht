@@ -1,0 +1,9 @@
+\section{Gyrosensor Programmierung (Koch)}
+Zu Beginn des Projekts war geplant den Gyrosensor MPU6050 zu nutzen, um die Position der Geschützplattform zu bestimmen, da eine kontinuierliche Bewegung um die eigene Achse aufgrund der Kabel nicht möglich ist. Dabei sollte der Sensor über den I2C-Bus mit dem Raspberry Pi 5 verbunden werden, um die Daten auszulesen und zu verarbeiten.
+Der MPU6050 ist dabei ein 3-Achsen-Gyroskop und 3-Achsen-Beschleunigungssensor, welcher entsprechende Drehbewegungen und Beschleunigungen entlang der Raumachsen messen kann, welche für eine genaue Winkelbestimmung notwendig sind.
+
+Nach kurzem Einlesen in die Dokumentation waren erste Rohdaten leicht auszulesen. Diese Rohdaten liegen in Form von 16 Bit in zwei Registern bereit und haben die Einheit $\mathit{LSB/g}$ für die Beschleunigungswerte und $\mathit{LSB/^\circ s}$ für die Gyroskop-Werte. Dies gilt es in tatsächliche physikalische Größen umzuwandeln, was bei unserem Projekt letztlich einem Winkel entspricht. 
+Um die Beschleunigungswerte nutzen zu können, muss dafür mittels des Skalierungsfaktors die Fallbeschleunigung $\mathit{g}$ errechnet werden, indem man den erhaltenen Wert $x/16384$ rechnet. Die $16384$ ergeben sich aus der Dokumentation und entsprechen den LSB bei einem Messbereich von $\pm2g$, welches der Standardauflösung entspricht und auch die höchste Auflösung des MPU6050 für ist.
+Ähnlich wird nun auch Winkelgeschwindigkeit ($\mathit{\circ s}$) errechnet. Hierbei beträgt der Teiler standardmäßig $131$. 
+
+\subsection{Kalman Filter Implementierung (Koch)}

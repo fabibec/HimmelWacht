@@ -1,0 +1,450 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+#include "esp_log.h"
+#include "motor-driver.h"
+
+#define TAG "MOTOR_TEST"
+
+// Test configuration - adjust these according to your hardware setup
+#define TEST_PWM_GPIO 27       // GPIO for PWM output
+#define TEST_DIR_GPIO 26       // GPIO for direction control
+#define TEST_FAULT_GPIO 25     // GPIO connected to motor driver FAULT pin
+#define TEST_FAULT_LED_GPIO 32 // GPIO for fault LED (usually built-in LED)
+#define TEST_PWM_FREQ 20000    // PWM frequency in Hz
+
+// Function prototypes
+static void test_motor_init_deinit(void);
+static void test_motor_speed_control(void);
+static void test_motor_direction_change(void);
+static void test_motor_ramping(void);
+static void test_motor_fault_handling(void);
+static void test_motor_continuous_operation(void);
+static void test_task(void *pvParameters);
+
+void app_main2(void)
+{
+    ESP_LOGI(TAG, "Starting Motor Driver Test Suite");
+
+    // Create test task
+    xTaskCreate(test_task, "motor_test_task", 4096, NULL, 5, NULL);
+}
+
+static void test_task(void *pvParameters)
+{
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Give system time to initialize
+
+    ESP_LOGI(TAG, "=== Motor Driver Test Suite ===");
+
+    // Run all tests
+    test_motor_init_deinit();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    test_motor_speed_control();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    test_motor_direction_change();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    test_motor_ramping();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    test_motor_fault_handling();
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    test_motor_continuous_operation();
+
+    ESP_LOGI(TAG, "=== All tests completed ===");
+
+    vTaskDelete(NULL);
+}
+
+static void test_motor_init_deinit(void)
+{
+    ESP_LOGI(TAG, "--- Test 1: Motor Initialization and Deinitialization ---");
+
+    // Test with valid configuration
+    motor_config_t config = {
+        .mcpwm_unit = MCPWM_UNIT_0,
+        .timer_num = MCPWM_TIMER_0,
+        .generator = MCPWM_OPR_A,
+        .pwm_signal = MCPWM0A,
+        .pwm_gpio_num = TEST_PWM_GPIO,
+        .dir_gpio_num = TEST_DIR_GPIO,
+        .fault_gpio_num = TEST_FAULT_GPIO,
+        .fault_led_gpio_num = TEST_FAULT_LED_GPIO,
+        .pwm_frequency_hz = TEST_PWM_FREQ,
+        .ramp_rate = 5,
+        .ramp_intervall_ms = 50,
+        .direction_hysteresis = 5,
+        .pwm_duty_limit = 50.0};
+
+    motor_handle_t *motor = motor_driver_init(&config);
+    if (motor != NULL)
+    {
+        ESP_LOGI(TAG, "Motor initialization successful");
+
+        // Test deinitialization
+        esp_err_t err = motor_driver_deinit(motor);
+        if (err == ESP_OK)
+        {
+            ESP_LOGI(TAG, "Motor deinitialization successful");
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Motor deinitialization failed: %s", esp_err_to_name(err));
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Motor initialization failed");
+    }
+
+    // Test with NULL configuration
+    motor = motor_driver_init(NULL);
+    if (motor == NULL)
+    {
+        ESP_LOGI(TAG, "Correctly handled NULL configuration");
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Should have failed with NULL configuration");
+        motor_driver_deinit(motor);
+    }
+}
+
+static void test_motor_speed_control(void)
+{
+    ESP_LOGI(TAG, "--- Test 2: Motor Speed Control ---");
+
+    motor_config_t config = {
+        .mcpwm_unit = MCPWM_UNIT_0,
+        .timer_num = MCPWM_TIMER_0,
+        .generator = MCPWM_OPR_A,
+        .pwm_signal = MCPWM0A,
+        .pwm_gpio_num = TEST_PWM_GPIO,
+        .dir_gpio_num = TEST_DIR_GPIO,
+        .fault_gpio_num = TEST_FAULT_GPIO,
+        .fault_led_gpio_num = TEST_FAULT_LED_GPIO,
+        .pwm_frequency_hz = TEST_PWM_FREQ,
+        .ramp_rate = 10,
+        .ramp_intervall_ms = 100,
+        .direction_hysteresis = 5,
+        .pwm_duty_limit = 80.0};
+
+    motor_handle_t *motor = motor_driver_init(&config);
+    if (motor == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize motor for speed test");
+        return;
+    }
+
+    // Test different speed values
+    float test_speeds[] = {0, 25, 50, 75, 100};
+    int num_speeds = sizeof(test_speeds) / sizeof(test_speeds[0]);
+
+    for (int i = 0; i < num_speeds; i++)
+    {
+        ESP_LOGI(TAG, "Setting speed to %.0f%% forward", test_speeds[i]);
+        esp_err_t err = motor_driver_set_speed(motor, test_speeds[i], MOTOR_DIRECTION_FORWARD);
+
+        if (err == ESP_OK)
+        {
+            ESP_LOGI(TAG, "Speed set successfully");
+
+            // Update motor several times to see ramping
+            for (int j = 0; j < 20; j++)
+            {
+                motor_driver_update(motor);
+                ESP_LOGI(TAG, "Current PWM: %.2f, Target PWM: %.2f",
+                         motor->current_pwm, motor->target_pwm);
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to set speed: %s", esp_err_to_name(err));
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    motor_driver_deinit(motor);
+}
+
+static void test_motor_direction_change(void)
+{
+    ESP_LOGI(TAG, "--- Test 3: Motor Direction Change ---");
+
+    motor_config_t config = {
+        .mcpwm_unit = MCPWM_UNIT_0,
+        .timer_num = MCPWM_TIMER_0,
+        .generator = MCPWM_OPR_A,
+        .pwm_signal = MCPWM0A,
+        .pwm_gpio_num = TEST_PWM_GPIO,
+        .dir_gpio_num = TEST_DIR_GPIO,
+        .fault_gpio_num = TEST_FAULT_GPIO,
+        .fault_led_gpio_num = TEST_FAULT_LED_GPIO,
+        .pwm_frequency_hz = TEST_PWM_FREQ,
+        .ramp_rate = 10,
+        .ramp_intervall_ms = 20,
+        .direction_hysteresis = 10,
+        .pwm_duty_limit = 90.0};
+
+    motor_handle_t *motor = motor_driver_init(&config);
+    if (motor == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize motor for direction test");
+        return;
+    }
+
+    // Start with forward motion
+    ESP_LOGI(TAG, "Starting forward at 50 speed");
+    motor_driver_set_speed(motor, 50, MOTOR_DIRECTION_FORWARD);
+
+    // Let it reach target speed
+    for (int i = 0; i < 30; i++)
+    {
+        motor_driver_update(motor);
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    ESP_LOGI(TAG, "Current state - PWM: %.2f, Direction: %d",
+             motor->current_pwm, motor->current_direction);
+
+    // Change to backward
+    ESP_LOGI(TAG, "Changing to backward direction");
+    motor_driver_set_speed(motor, 50, MOTOR_DIRECTION_BACKWARD);
+
+    // Monitor the direction change process
+    for (int i = 0; i < 50; i++)
+    {
+        motor_driver_update(motor);
+        ESP_LOGI(TAG, "PWM: %.2f, Current Dir: %d, Target Dir: %d",
+                 motor->current_pwm, motor->current_direction, motor->target_direction);
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    // Test stop
+    ESP_LOGI(TAG, "Stopping motor");
+    motor_driver_set_speed(motor, 0, MOTOR_DIRECTION_STOP);
+
+    for (int i = 0; i < 20; i++)
+    {
+        motor_driver_update(motor);
+        ESP_LOGI(TAG, "PWM: %.2f, Direction: %d",
+                 motor->current_pwm, motor->current_direction);
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    motor_driver_deinit(motor);
+}
+
+static void test_motor_ramping(void)
+{
+    ESP_LOGI(TAG, "--- Test 4: Motor Ramping Behavior ---");
+
+    motor_config_t config = {
+        .mcpwm_unit = MCPWM_UNIT_0,
+        .timer_num = MCPWM_TIMER_0,
+        .generator = MCPWM_OPR_A,
+        .pwm_signal = MCPWM0A,
+        .pwm_gpio_num = TEST_PWM_GPIO,
+        .dir_gpio_num = TEST_DIR_GPIO,
+        .fault_gpio_num = TEST_FAULT_GPIO,
+        .fault_led_gpio_num = TEST_FAULT_LED_GPIO,
+        .pwm_frequency_hz = TEST_PWM_FREQ,
+        .ramp_rate = 2, // Slow ramp rate for visibility
+        .ramp_intervall_ms = 100,
+        .direction_hysteresis = 5,
+        .pwm_duty_limit = 100.0};
+
+    motor_handle_t *motor = motor_driver_init(&config);
+    if (motor == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize motor for ramping test");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Testing slow ramp up from 0 to 50");
+    motor_driver_set_speed(motor, 50, MOTOR_DIRECTION_FORWARD);
+
+    // Monitor ramping up
+    while (motor->current_pwm < motor->target_pwm)
+    {
+        motor_driver_update(motor);
+        ESP_LOGI(TAG, "Current PWM: %.2f%%, Target: %.2f%%",
+                 motor->current_pwm, motor->target_pwm);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    ESP_LOGI(TAG, "Testing ramp down from 50 to 20");
+    motor_driver_set_speed(motor, 20, MOTOR_DIRECTION_FORWARD);
+
+    // Monitor ramping down
+    while (motor->current_pwm > motor->target_pwm)
+    {
+        motor_driver_update(motor);
+        ESP_LOGI(TAG, "Current PWM: %.2f%%, Target: %.2f%%",
+                 motor->current_pwm, motor->target_pwm);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    motor_driver_deinit(motor);
+}
+
+static void test_motor_fault_handling(void)
+{
+    ESP_LOGI(TAG, "--- Test 5: Motor Fault Handling ---");
+
+    motor_config_t config = {
+        .mcpwm_unit = MCPWM_UNIT_0,
+        .timer_num = MCPWM_TIMER_0,
+        .generator = MCPWM_OPR_A,
+        .pwm_signal = MCPWM0A,
+        .pwm_gpio_num = TEST_PWM_GPIO,
+        .dir_gpio_num = TEST_DIR_GPIO,
+        .fault_gpio_num = TEST_FAULT_GPIO,
+        .fault_led_gpio_num = TEST_FAULT_LED_GPIO,
+        .pwm_frequency_hz = TEST_PWM_FREQ,
+        .ramp_rate = 5,
+        .ramp_intervall_ms = 50,
+        .direction_hysteresis = 5,
+        .pwm_duty_limit = 90.0};
+
+    motor_handle_t *motor = motor_driver_init(&config);
+    if (motor == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize motor for fault test");
+        return;
+    }
+
+    // Check initial fault state
+    bool fault_active = motor_driver_is_fault_active(motor);
+    ESP_LOGI(TAG, "Initial fault state: %s", fault_active ? "ACTIVE" : "INACTIVE");
+
+    // Test fault clearing when no fault is present
+    esp_err_t err = motor_driver_clear_fault(motor);
+    ESP_LOGI(TAG, "Clear fault result: %s", esp_err_to_name(err));
+
+    // Start motor
+    motor_driver_set_speed(motor, 30, MOTOR_DIRECTION_FORWARD);
+
+    // Update motor for a while
+    ESP_LOGI(TAG, "Running motor normally...");
+    for (int i = 0; i < 20; i++)
+    {
+        err = motor_driver_update(motor);
+        ESP_LOGI(TAG, "Update result: %s, Fault active: %s",
+                 esp_err_to_name(err),
+                 motor_driver_is_fault_active(motor) ? "YES" : "NO");
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    // Simulate fault (this part depends on your hardware)
+    ESP_LOGI(TAG, "To test fault handling, manually trigger fault on GPIO %d", TEST_FAULT_GPIO);
+    ESP_LOGI(TAG, "Monitoring fault status for 10 seconds...");
+
+    for (int i = 0; i < 100; i++)
+    {
+        fault_active = motor_driver_is_fault_active(motor);
+        if (fault_active)
+        {
+            ESP_LOGI(TAG, "FAULT DETECTED! Fault LED should be on");
+            err = motor_driver_update(motor);
+            ESP_LOGI(TAG, "Update during fault returns: %s", esp_err_to_name(err));
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    motor_driver_deinit(motor);
+}
+
+static void test_motor_continuous_operation(void)
+{
+    ESP_LOGI(TAG, "--- Test 6: Continuous Operation ---");
+
+    motor_config_t config = {
+        .mcpwm_unit = MCPWM_UNIT_0,
+        .timer_num = MCPWM_TIMER_0,
+        .generator = MCPWM_OPR_A,
+        .pwm_signal = MCPWM0A,
+        .pwm_gpio_num = TEST_PWM_GPIO,
+        .dir_gpio_num = TEST_DIR_GPIO,
+        .fault_gpio_num = TEST_FAULT_GPIO,
+        .fault_led_gpio_num = TEST_FAULT_LED_GPIO,
+        .pwm_frequency_hz = TEST_PWM_FREQ,
+        .ramp_rate = 5,
+        .ramp_intervall_ms = 50,
+        .direction_hysteresis = 5,
+        .pwm_duty_limit = 85.0};
+
+    motor_handle_t *motor = motor_driver_init(&config);
+    if (motor == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize motor for continuous test");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Running continuous operation test for 30 seconds...");
+    ESP_LOGI(TAG, "This will cycle through different speeds and directions");
+
+    uint32_t start_time = xTaskGetTickCount();
+    uint32_t phase_time = 0;
+    int phase = 0;
+
+    while ((xTaskGetTickCount() - start_time) < pdMS_TO_TICKS(30000))
+    {
+        // Update motor
+        esp_err_t err = motor_driver_update(motor);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Motor update failed: %s", esp_err_to_name(err));
+        }
+
+        // Change operation every 5 seconds
+        if ((xTaskGetTickCount() - phase_time) > pdMS_TO_TICKS(5000))
+        {
+            phase_time = xTaskGetTickCount();
+
+            switch (phase % 4)
+            {
+            case 0:
+                ESP_LOGI(TAG, "Phase 0: Forward 40");
+                motor_driver_set_speed(motor, 40, MOTOR_DIRECTION_FORWARD);
+                break;
+            case 1:
+                ESP_LOGI(TAG, "Phase 1: Forward 80");
+                motor_driver_set_speed(motor, 80, MOTOR_DIRECTION_FORWARD);
+                break;
+            case 2:
+                ESP_LOGI(TAG, "Phase 2: Backward 60");
+                motor_driver_set_speed(motor, 60, MOTOR_DIRECTION_BACKWARD);
+                break;
+            case 3:
+                ESP_LOGI(TAG, "Phase 3: Stop");
+                motor_driver_set_speed(motor, 0, MOTOR_DIRECTION_STOP);
+                break;
+            }
+            phase++;
+        }
+
+        // Check fault status periodically
+        if (motor_driver_is_fault_active(motor))
+        {
+            ESP_LOGW(TAG, "Fault detected during continuous operation!");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    // Final stop
+    motor_driver_set_speed(motor, 0, MOTOR_DIRECTION_STOP);
+    for (int i = 0; i < 20; i++)
+    {
+        motor_driver_update(motor);
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    motor_driver_deinit(motor);
+}

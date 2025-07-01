@@ -1,8 +1,19 @@
 # AI object detection
 
+
 To run the AI-part of this project:
 
 Prerequisites: Laboratory Computer needs to be connected to TIRoboter WIFI
+
+
+## Credentials
+
+Username: hw
+
+Passwort: dt 
+
+ssh HW@IP_ADRESS
+
 
 1. Start MediaMTX-Server with the correct configuration on the RPi5 => /mediamtx/mediamtx.yml
 2. Start MQTT-Broker with correct configuration => mosquttio.exe -c mosquitto.conf

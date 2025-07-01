@@ -1,0 +1,53 @@
+\chapter{Stromversorgung}
+
+\section{Analyse des Aufbaus und der Komponenten des vorherigen Projekts (Koch)}
+
+Zu Beginn wurde die bestehende Stromversorgung und die dafür genutzten Komponenten eines früheren Semesterprojekts analysiert, um anhand dessen bestimmen zu können, welche Teile wiederverwendet werden können, sowie ob das gegebene Layout in etwa für das eigene Projekt genutzt werden kann.
+
+Essentiell bestand die Stromversorgung aus zwei Step-Down-Wandlern, die aus einer Eingangsspannung eine 8V und eine 5V Ausgangsspannung erzeugten, was ebenfalls für unser eigenes Projekt benötigt wird. Außerdem wurden zwei Verteiler genutzt, um die Spannungen auf die verschiedenen Sensoren und Aktoren zu verteilen.
+Das vorhandene Layout auf dem Lochrastergerüst war für uns jedoch nicht geeignet, da wir einen übersichtlicheren Aufbau und ein sinnvolles Color-Coding der Kabel für die verschiedenen Anschlüsse und für einen besseren Überblick anstrebten.
+
+\section{Aufbau der eigenen Stromversorgung (Koch)}
+Nachdem die vorhandenen Teile analysiert wurden, wurde die Entscheidung getroffen nur die Step-Down-Wandler, da der Rest nicht relevant für unser Projekt war. Lediglich die Verteiler brauchten wir auch, mussten allerdings ersetzt werden, da die Schraubverbindungen kaputt waren.
+Die Step-Down-Wandler waren so aufgebaut, dass ein Modul die Eingangsspannung erhielt und am Ausgang ein selbstangefertigtes Y-Kabel hatte, welches dann jeweils in einen Verteiler und in den anderen Step-Down-Wandler ging.
+Diese Kombination sollte auch so für unser Projekt übernommen werden, allerdings mussten dafür die Kabel erneuert werden, da die alten Kabel nicht dem geplanten Color-Coding entsprachen und zu kurz waren. Dabei stellte sich heraus, dass der entstandene Durchmesser, durch die Kombination aus zwei Kabeln zu einem Y-Kabel, zu groß war, um in die Steckverbindung zu passen.
+Aus diesem Grund entstand das alternative Konzept die ausgehenden Kabel des ersten Step-Down-Wandlers mit dem ersten Verteiler zu verbinden. Das war vor allem dadurch leicht realisierbar, da jeder Verteiler 12 Ports besitzt und 8V lediglich für die Motoren zum fahren benötigt werden. Somit konnte eine Verbindung vom 8V-Verteiler zum zweiten Step-Down-Wanlder hergestellt werden ohne dabei die Steckverbindungen zu beschädigen.
+\newpage
+Das Color-Coding der Kabel wurde wie folgt eingeführt:
+\begin{itemize}
+    \item \textbf{Rot:} Versorgungsspannung
+    \item \textbf{Schwarz:} Masse
+    \item \textbf{Weiß:} PWM-Verbindung für Motoren
+    \item \textbf{Gelb:} Direction Pin für Motoren
+\end{itemize}
+Des Weiteren wurde darauf geachtet, dass die Kabel so kurz wie möglich gehalten werden und wenn möglich unter der Platte verlegt werden, um eine bessere Übersicht zu gewährleisten.
+
+Als Eingangsspannung wurde zu Beginn ein 6V-Batterieverbund genutzt, der im Laufe des Projekts durch einen 12V-Batterieverbund ausgetauscht wurde, da beim Testing der Motortreiber festgestellt wurde, dass die Motoren eine höhere Spannung benötigen, um korrekt zu funktionieren. Außerdem wurde versucht den Raspberry Pi 5 über den 5V-Verteiler zu versorgen, was jedoch nicht funktionierte, da die Stromstärke zu niedrig war, wenn der Pi aufwendigere Aufgaben erledigen musste. Aus diesem Grund wurde eine Powerbank genutzt, die den Pi mit Strom versorgt und somit die 5V-Verteilung entlastet.
+
+Der Gesamtaufbau der Stromversorgung sieht dabei wie folgt aus:
+\begin{itemize}
+    \item \textbf{12V-Batterieverbund:}
+    \begin{itemize}
+        \item Step-Down-Wandler (8V) $\rightarrow$ 8V-Verteiler
+        \begin{itemize}
+            \item 2 PWM Boards für Motoren
+            \item Step-Down-Wandler (5V) $\rightarrow$ 5V-Verteiler
+            \begin{itemize}
+                \item ESP32
+                \item 2 PWM Boards für die Flywheel Motoren
+                \item Servo-Motor für die Geschützplattform
+                \item Servo-Motor für den Geschützarm
+            \end{itemize}
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Powerbank:}
+    \begin{itemize}
+        \item Raspberry Pi 5
+        \begin{itemize}
+            \item Pi-Camera
+            \item MPU6050 Gyrosensor
+            \item SRF02 Ultraschallsensor
+        \end{itemize}
+    \end{itemize}
+\end{itemize}

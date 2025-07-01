@@ -1,0 +1,130 @@
+\documentclass[a4paper,11pt]{report}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel} % For German language
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{listings} % For code listings
+\usepackage{setspace} % For line spacing
+\usepackage{geometry} % For setting margins
+\usepackage{titlesec} % For customizing title formats
+\usepackage{chngcntr} % For changing counter settings
+\usepackage{fancyhdr} % For custom headers and footers
+\usepackage[style=ieee,backend=biber,url=true]{biblatex}
+\addbibresource{shared/references.bib} 
+\usepackage{float}
+\usepackage{titling}
+\usepackage{svg}
+\usepackage{pdfpages}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{acro}
+\usepackage{csquotes}
+\usepackage{url}
+\usepackage{breakurl}
+\usepackage[export]{adjustbox}
+\usepackage{booktabs}
+\usepackage{longtable}
+%\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{tabularx}  % Automatically adjusts table width
+\usepackage{hyperref}
+\usepackage{subcaption}
+
+% Margins
+\geometry{
+    left=3cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+% Line spacing
+\onehalfspacing % 1.5 line spacing, you can use \singlespacing for single line spacing
+
+% Remove ident before newline
+\setlength{\parindent}{0pt}
+
+% Decimal numbering without "Kapitel" prefix
+\titleformat{\chapter}[block]
+  {\normalfont\huge\bfseries}{\thechapter.}{20pt}{\Large}
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection.}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection.}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsection.}{1em}{}
+
+% Custom headers
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}    % Left side of the header
+\fancyfoot[C]{\thepage}     % Mid side of the footer
+
+% Redefine \leftmark to show only the chapter number and title
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter.\ #1}{}}
+
+% \input{acronyms.tex}
+
+\begin{document}
+
+% Title Page
+\input{src/shared/cover.tex}
+
+% Table of Contents
+\tableofcontents
+\newpage
+
+% Main Content
+\input{src/koch/stromversorgung.tex}
+
+\input{src/specht/cad.tex}
+\input{src/becker/cad.tex}
+
+\input{src/specht/esp32.tex}
+\input{src/becker/esp32.tex}
+
+\input{src/becker/raspberry.tex}
+\input{src/koch/raspberry.tex}
+
+
+%\input{gnn}
+%\input{p5p}
+%\input{end.tex}
+
+% Time tables
+\includepdf[pages=-]{pdfs/Stundenliste_Fabian_Becker.pdf}
+% \includepdf[pages=-]{Stundenliste_Nicolas_Koch.pdf}
+% \includepdf[pages=-]{Stundenliste_Jendrik_Jürgens.pdf}
+\includepdf[pages=-]{pdfs/Stundenliste_Michael_Specht.pdf}
+% \includepdf[pages=-]{Stundenliste_Jonathan_Wohlrab.pdf}
+
+% List of Figures
+\listoffigures
+\addcontentsline{toc}{chapter}{Abbildungsverzeichnis}
+\newpage
+
+% List of Tables
+\listoftables
+\addcontentsline{toc}{chapter}{Tabellenverzeichnis}
+\newpage
+
+% List of Acronyms
+%\addcontentsline{toc}{chapter}{Abkürzungen}
+% \printacronyms[heading=chapter*]
+%\newpage
+
+% Bibliography
+\newpage
+\begin{sloppypar}
+  \printbibliography
+ \end{sloppypar}
+
+% Annex
+% \input{annex.tex}
+
+\end{document}
