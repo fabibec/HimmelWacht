@@ -1,3 +1,16 @@
+\section{Einführung (muss nach vorne) (Becker, Specht)}
+
+Für die Programmierung der zeitkritischen Funktionalitäten wurde ein ESP-32 verwenden, da Funktion wie das Fahren an strengere zeitlichere Anforderungen
+gebunden sind, als mit einem General-Purpose Betriebssystem zu realisieren. 
+
+Die Wahl fiel hierbei genau auf den klassichen ESP-32 Chip, da dieser den Bluetooth Classic Standard unterstützt welcher für die Ansteuerung des Dualshock4 Controllers notwending ist.
+Des Weiteren ist aufgrund des weiten Verbreitung viel Material zu dieser Serie verfügbar was zu einer signifikant einfacheren Fehlersuche beiträgt.
+
+Es wurde allerdings explizit darauf verzichtet den Controller mittels des Arduino Frameworks zu programmieren. Grund hierfür war vor allem die Größe
+der entstehenden Kompilate. Wie durch spätere Kapitel hoffentlich zu erkennen, sind auf dem System viele Funktionalitäten beherbergt was bedeutet, dass der Speicherplatz begrenzt ist.
+Daher wurde der Controller mittels des Espressif IoT Development Frameworks (ESP-IDF) programmiert. Diese Frameworks bietet ebenfalls eine Pletora an Treiber für verschienste Funktionen, ist jedoch für Espressif Controller
+zugeschnitten und damit deutlich platzsparender. Die Programmierung selbst fand in der Sprache C statt.
+
 \section{Dualshock4 Treiber (Becker)}
 
 \subsection{Version 1: eigens entwickelter Treiber}
