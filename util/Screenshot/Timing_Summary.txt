@@ -6,3 +6,10 @@ Overhead time (display, I/O, etc.): 2.95s
 Average FPS (inference only): 55.61
 Average FPS (real-time): 35.65
 
+=== Timing Summary - RPI5 ===
+Processed 293 frames
+Total elapsed time (real-time): 77.55s
+Total inference time: 76.87s
+Overhead time (display, I/O, etc.): 0.68s
+Average FPS (inference only): 3.81
+Average FPS (real-time): 3.78
