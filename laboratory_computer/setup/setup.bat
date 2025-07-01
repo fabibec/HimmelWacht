@@ -7,6 +7,8 @@ pip install paho-mqtt
 pip install aiohttp
 pip install asyncio
 pip install websockets
+pip install loguru
+pip install websockets
 
 echo Uninstalling conflicting packages...
 pip uninstall -y opencv-python

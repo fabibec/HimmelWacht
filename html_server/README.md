@@ -1,1 +1,0 @@
-# start server on raspberry pi with python3 html_daemon.py
