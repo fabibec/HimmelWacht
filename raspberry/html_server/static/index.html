@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <title>HimmelWacht Status</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    h1#heading {
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+      font-size: 3rem;
+      margin-bottom: 20px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      user-select: none;
+    }
+
+    #video-container {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 255, 0, 0.1);
+      border: 2px solid rgba(0, 255, 0, 0.3);
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 10;
+      backdrop-filter: blur(5px);
+    }
+
+    .spinner {
+      border: 4px solid rgba(0, 255, 0, 0.3);
+      border-top: 4px solid #00ff00;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #sensor-output {
+      display: flex;
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .sensor-data {
+      color: #00ff00;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 15px 30px;
+      background: rgba(0, 255, 0, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      min-width: 200px;
+    }
+
+    #status-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 5;
+    }
+
+    .status-item {
+      background: rgba(0, 0, 0, 0.7);
+      color: #00ff00;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    .connection-active {
+      color: #00ff00;
+    }
+
+    .connection-inactive {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+
+<h1 id="heading">Himmelwacht</h1>
+
+<div id="video-container">
+  <div id="loading"><div class="spinner"></div></div>
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="overlay"></canvas>
+  
+  <div id="status-bar">
+    <div id="video-status" class="status-item connection-inactive">Video: Connecting...</div>
+    <div id="bbox-status" class="status-item connection-inactive">Boxes: Offline</div>
+    <div id="sensor-status" class="status-item connection-inactive">Sensors: Offline</div>
+  </div>
+</div>
+
+<div id="sensor-output">
+  <div id="gyro-output" class="sensor-data">Waiting for gyro data...</div>
+</div>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('overlay');
+  const ctx = canvas.getContext('2d');
+  const loading = document.getElementById('loading');
+  const gyroOutput = document.getElementById('gyro-output');
+  
+  // Status elements
+  const videoStatus = document.getElementById('video-status');
+  const bboxStatus = document.getElementById('bbox-status');
+  const sensorStatus = document.getElementById('sensor-status');
+
+  // Scale factors for coordinate conversion
+  let scaleX = 1;
+  let scaleY = 1;
+  
+  // Store current bounding boxes and ultrasonic data
+  let currentBoxes = [];
+  let currentUltrasonicData = null;
+
+  function updateCanvasSize() {
+    const rect = video.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Calculate scale factors for coordinate conversion
+    scaleX = canvas.width / 1280;  // Original video width
+    scaleY = canvas.height / 1080; // Original video height
+  }
+
+  video.onplaying = () => {
+    loading.style.display = 'none';
+    videoStatus.textContent = 'Video: Active';
+    videoStatus.className = 'status-item connection-active';
+    updateCanvasSize();
+    drawCrosshairLoop();
+  };
+
+  video.onloadedmetadata = () => {
+    updateCanvasSize();
+  };
+
+  // Resize handler
+  window.addEventListener('resize', updateCanvasSize);
+
+  // === WebRTC via MediaMTX ===
+  const peer = new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  });
+
+  peer.oniceconnectionstatechange = () => {
+    console.log('ICE State:', peer.iceConnectionState);
+    if (peer.iceConnectionState === 'connected' || peer.iceConnectionState === 'completed') {
+      videoStatus.textContent = 'Video: Connected';
+      videoStatus.className = 'status-item connection-active';
+    } else if (peer.iceConnectionState === 'disconnected' || peer.iceConnectionState === 'failed') {
+      videoStatus.textContent = 'Video: Disconnected';
+      videoStatus.className = 'status-item connection-inactive';
+    }
+  };
+
+  peer.ontrack = (event) => {
+    console.log("Track received:", event.track.kind);
+    if (event.streams && event.streams[0]) {
+      video.srcObject = event.streams[0];
+    } else {
+      const stream = new MediaStream([event.track]);
+      video.srcObject = stream;
+    }
+    video.play().catch(err => {
+      console.warn("Autoplay error:", err);
+    });
+  };
+
+  async function connectWebRTC() {
+    try {
+      const offer = await peer.createOffer({ offerToReceiveVideo: true });
+      await peer.setLocalDescription(offer);
+
+      const res = await fetch('http://172.16.9.13:8889/stream/whep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: offer.sdp
+      });
+
+      if (!res.ok) {
+        throw new Error(`WHEP request failed: ${res.status}`);
+      }
+
+      const answerSdp = await res.text();
+      await peer.setRemoteDescription({
+        type: 'answer',
+        sdp: answerSdp
+      });
+
+      console.log("WebRTC connection established.");
+    } catch (err) {
+      console.error("WebRTC connection failed:", err);
+      videoStatus.textContent = 'Video: Failed';
+      videoStatus.className = 'status-item connection-inactive';
+    }
+  }
+
+  connectWebRTC();
+
+  // === WebSocket for Bounding Boxes ===
+  const bboxSocket = new WebSocket('ws://172.16.3.105:8001');
+
+  bboxSocket.onopen = () => {
+    bboxStatus.textContent = 'Boxes: Connected';
+    bboxStatus.className = 'status-item connection-active';
+  };
+
+  bboxSocket.onclose = () => {
+    bboxStatus.textContent = 'Boxes: Disconnected';
+    bboxStatus.className = 'status-item connection-inactive';
+  };
+
+  bboxSocket.onmessage = function (event) {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.boxes) {
+        currentBoxes = data.boxes;
+      }
+    } catch (err) {
+      console.error('Invalid JSON from bounding box server:', err);
+    }
+  };
+
+  function drawCrosshair() {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const size = 20;
+
+    // Outer glow
+    ctx.shadowColor = '#00ff00';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(centerX - size, centerY);
+    ctx.lineTo(centerX + size, centerY);
+    ctx.moveTo(centerX, centerY - size);
+    ctx.lineTo(centerX, centerY + size);
+    ctx.stroke();
+
+    // Inner crosshair
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawCrosshairLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Always draw crosshair
+    drawCrosshair();
+    
+    // Draw current bounding boxes if any (only show distance when boxes are present)
+    if (currentBoxes && currentBoxes.length > 0) {
+      // Draw bounding boxes with proper scaling
+      ctx.shadowColor = '#00ff00';
+      ctx.shadowBlur = 5;
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      ctx.font = '12px monospace';
+      ctx.fillStyle = '#00ff00';
+
+      currentBoxes.forEach(box => {
+        // Scale coordinates to match display size
+        const scaledX = box.x * scaleX;
+        const scaledY = box.y * scaleY;
+        const scaledWidth = box.width * scaleX;
+        const scaledHeight = box.height * scaleY;
+
+        // Draw box
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+        
+        // Draw label with background
+        if (box.label) {
+          const textWidth = ctx.measureText(box.label).width;
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.fillRect(scaledX, scaledY - 20, textWidth + 8, 16);
+          ctx.fillStyle = '#000000';
+          ctx.fillText(box.label, scaledX + 4, scaledY - 8);
+          ctx.fillStyle = '#00ff00';
+        }
+
+        // Draw ultrasonic distance below the box ONLY if bounding box is present AND ultrasonic data is available
+        if (currentUltrasonicData !== null && scaledHeight !== 0 && scaledWidth !== 0) {
+          const distanceText = `${currentUltrasonicData}`;
+          const distanceTextWidth = ctx.measureText(distanceText).width;
+          const distanceY = scaledY + scaledHeight + 20;
+          
+          // Background for distance text
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fillRect(scaledX, distanceY - 16, distanceTextWidth + 8, 16);
+          
+          // Distance text
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.fillText(distanceText, scaledX + 4, distanceY - 4);
+          ctx.fillStyle = '#00ff00';
+        }
+      });
+    }
+    
+    requestAnimationFrame(drawCrosshairLoop);
+  }
+
+  // === WebSocket for Sensor Data (Gyro + Ultrasonic) ===
+  const sensorSocket = new WebSocket('ws://172.16.9.13:8765');
+
+  sensorSocket.onopen = () => {
+    sensorStatus.textContent = 'Sensors: Connected';
+    sensorStatus.className = 'status-item connection-active';
+  };
+
+  sensorSocket.onclose = () => {
+    sensorStatus.textContent = 'Sensors: Disconnected';
+    sensorStatus.className = 'status-item connection-inactive';
+  };
+
+  sensorSocket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      
+      if (data.gyro !== undefined) {
+        gyroOutput.textContent = `Geschützneigung: ${data.gyro}`;
+      }
+      
+      // Store ultrasonic data but don't display it in a separate box
+      if (data.ultrasonic !== undefined) {
+        currentUltrasonicData = data.ultrasonic;
+      }
+    } catch (err) {
+      console.error('Invalid JSON from sensor server:', err);
+    }
+  };
+
+  sensorSocket.onerror = () => {
+    gyroOutput.textContent = "Could not connect to sensor server.";
+    sensorStatus.textContent = 'Sensors: Error';
+    sensorStatus.className = 'status-item connection-inactive';
+  };
+</script>
+
+</body>
+</html>
