@@ -65,14 +65,14 @@ Einerseits das Interface zur Plattform-Kontrolle und andererseits das Interface 
 
 \subsection{Ansteuerung der Servo-Motoren (Becker)}
 
-Um nun die Platform sowohl mit manuellen Modus mit dem Dualshock4 Controller, als auch im semi-automatischen Modus mit künstlicher Intelligenz über MQTT präzise Steuern zu können,
-wurde nun ein Interface entwickelt, welches die Ansteuerung eines Motors an eine gewisse Position erlaubt. 
+Um nun die Plattform sowohl manuell über den DualShock4-Controller als auch semi-automatisch per künstlicher Intelligenz über MQTT präzise steuern zu können, wurde ein Interface entwickelt, das die Ansteuerung eines Motors an eine bestimmte Position erlaubt. 
 
-Gearbeitet wird hier mit der Einheit Grad, ein Blick in das Datenblatt der Servo Motoren zeigt,
-das durch die Einstellung der Duty-Cycle Länge des PWN-Signals eine Drehung auf eine gewisse Grad-Position erreicht wird. 
-Im ersten Schritt wurden nun durch manuelles Testen die \textit{OFF} Werte für die Punkte \ang{-90} (max. Drehung nach links), \ang{0} und \ang{90} (max. Drehung nach rechts) ermittelt. 
-Der Wert für die Drehung auf \ang{0} wird im Folgenden als $value_{zero}$ bezeichnet. 
-Um nun den Zielwert $value_{off}$ für den \textit{OFF} Parameter des PWM Board Treibers zu berechnen, wird Formel \ref{eq:pwm_to_duty} verwendet:
+In diesem Kontext wird mit der Einheit Grad gearbeitet. 
+Ein Blick in die Referenz \cite{esp_servo_control} der Servo-Motoren zeigt, dass durch die Einstellung der Duty-Cycle-Länge des PWM-Signals eine Drehung auf eine bestimmte Grad-Position erreicht wird. 
+Im ersten Schritt wurden die \textit{OFF} Werte für die Punkte \ang{-90} (max. Drehung nach links), \ang{0} und \ang{90} (max. Drehung nach rechts) manuell ermittelt.
+Die absoluten Werte für die Drehungen werden im Folgenden als $value_{-90^\circ}$, $value_{0^\circ}$ und $value_{90^\circ}$ bezeichnet.
+
+Für die Berechnung des Zielwerts $value_{off}$ für den \textit{OFF} Wert des PWM-Board-Treibers aus einem gegebenen Winkel wird Formel \ref{eq:pwm_to_duty} verwendet.
 
 \begin{gather}
     \begin{aligned}
@@ -91,8 +91,43 @@ Um nun den Zielwert $value_{off}$ für den \textit{OFF} Parameter des PWM Board 
     \label{eq:pwm_to_duty}
 \end{gather}
 
+Die Idee der Formel beruht auf der Tatsache, dass die Differenz aus $value_{90^\circ}$ bzw. $value_{-90^\circ}$ und $value_{0^\circ}$ gebildet und anschließend gleichmäßig auf den Bereich von $]1, 90[$, also auf 90 Werte, aufgeteilt wird. 
 
+Für jedes zusätzliche Grad Rotation um den Nullpunkt müssten demnach entweder $2.\overline{3}$ addiert oder subtrahiert werden.
+Da dies in Anbetracht der Verwendung von Festkommazahlen nicht realisierbar wäre, erscheint die naheliegende Idee, den Wert zu runden. 
+Diese Praktik würde jedoch im Zeitverlauf zu einer zunehmenden Abweichung und folglich zu einem Verlust an Präzision führen.
+Um das genannte Problem zu vermeiden, wird der \textit{OFF} Wert für jedes dritte Grad Drehung um den Faktor 3 verändert und für jedes andere Grad um Faktor 2.
+Die Formel \ref{eq:pwm_to_duty} berechnet dabei in $n_3$ die Anzahl der Faktor-3-Drehungen und in $n_2$ die Anzahl der Faktor-2-Drehungen.
+Ausgehend davon wird $value_{0^\circ}$ verändert.
+
+Das Endergebnis stellt eine Funktion dar, mittels derer eine präzise gradweise Ansteuerung beider Plattformachsen möglich ist.
+
+Darüber hinaus wurde im Interface ein Clipping der Werte als Sicherheitmechanismus integriert. Im Zuge der Initialisierung des Plattforminterfaces muss für jede Achse ein Startwinkel sowie ein linker und rechter Stopwinkel angegeben werden.
+Sollte es bei der Steuerung durch den Dualshock4-Controller in dessen Regelschleife oder in der KI-Berechnung zu einem fehlerhaften Gradwert kommen, wird dieser Wert automatisch an den nächstgelegenen Stopwinkel geclippt. 
+Durch diese Maßnahme werden potenzielle Materialschäden, die durch fehlerhafte Drehungen verursacht werden könnten, verhindert.
+
+Die Realisierung der Ansteuerung des kleinen Servos, dessen Funktion darin besteht, die Nerf-Darts in die Flywheel-Motoren zu schieben, würde durch die Verwendung dieser Art der Ansteuerung zu einer unnötigen Komplexität führen.
+Daher wurde für diesen Motor lediglich eine Startposition (Geschütztrigger ganz hinten; Dart kann in das Magazin fallen) und eine Endposition (Geschütztrigger ganz vorne; Dart wurde in die Flywheels geschoben) durch manuelles Einsetzen von \textit{OFF} Werten festgelegt.
+Wird nun ein Schuss ausgelöst, so fährt der Servo-Motor zunächst in seine Endposition und von dort aus wieder zurück in seine Startposition.
 
 \subsection{Ansteuerung der Flywheel Motoren (Becker, Koch, Wohlrab)}
+
+Für die Vervollständigung des Fire-Control Interfaces wird nun noch die Ansteuerung der Flywheel-Motoren benötigt.
+In dem vorliegenden Projekt erfolgt die Steuerung der beiden Gleichstrommotoren jeweils durch ein Power-MOSFET-Modul.
+
+Die Funktionsweise des Modul lässt sich folgendermaßen beschreiben:
+
+\begin{itemize}
+    \item Auf einer Seite wird der Eingangstrom, in unserem Fall 5V, vom Stromverteiler eingeführt.
+    \item Andererseits wird der Ausgang jeweils mit einem Motor verbunden.
+    \item Die am Ausgang ausgegebene Spannung kann über einen PWM-Pin geregelt werden \cite{esp_platform_flywheel_motor}.
+\end{itemize}
+
+Die Wahl fiel auf dieses relativ simple Modul, da lediglich die Anforderung bestand, dass sich die Motoren bei der Schussabgabe möglichst schnell drehen sollen.
+Im Rahmen dieses Projekts waren keine Änderungen der Richtung oder präzisere Steuerung erforderlich.
+
+Im Rahmen des manuellen Tests wurde festgestellt, dass zur Erzielung eines optimalen Schussbildes eine Versorgung der Motoren mit 5 Volt erforderlich ist. 
+Infolgedessen beträgt der Duty-Cycle entweder 0 oder 100 Prozent.
+Daher wurde der ursprüngliche PWM-Code letztlich auf das reine Ein- und Ausschalten eines GPIO-Pins reduziert.
 
 \section{Integration (Becker, Specht)}
