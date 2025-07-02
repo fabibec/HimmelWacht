@@ -15,14 +15,13 @@
 \usepackage{titlesec} % For customizing title formats
 \usepackage{chngcntr} % For changing counter settings
 \usepackage{fancyhdr} % For custom headers and footers
-\usepackage[style=ieee,backend=biber,url=true]{biblatex}
-\addbibresource{shared/references.bib} 
+\usepackage[style=ieee,backend=biber,url=true,citestyle=numeric-comp]{biblatex}
+\addbibresource{references.bib} 
 \usepackage{float}
 \usepackage{titling}
 \usepackage{svg}
 \usepackage{pdfpages}
 \usepackage{array}
-\usepackage{xcolor}
 \usepackage{acro}
 \usepackage{csquotes}
 \usepackage{url}
@@ -34,6 +33,8 @@
 \usepackage{tabularx}  % Automatically adjusts table width
 \usepackage{hyperref}
 \usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{siunitx}
 
 % Margins
 \geometry{
@@ -91,7 +92,6 @@
 \input{src/becker/raspberry.tex}
 \input{src/koch/raspberry.tex}
 
-
 %\input{gnn}
 %\input{p5p}
 %\input{end.tex}
@@ -121,8 +121,9 @@
 % Bibliography
 \newpage
 \begin{sloppypar}
-  \printbibliography
- \end{sloppypar}
+  \addcontentsline{toc}{chapter}{Literaturverzeichnis} % Add to ToC
+  \printbibliography[title=Literaturverzeichnis]
+\end{sloppypar}
 
 % Annex
 % \input{annex.tex}
