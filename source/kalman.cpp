@@ -1,3 +1,5 @@
+// angepasste Quelle: https://github.com/jarzebski/Arduino-KalmanFilter
+
 #include "kalman.h"
 Kalman::Kalman()
 {

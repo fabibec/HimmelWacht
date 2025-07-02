@@ -1,3 +1,9 @@
+/*  angepasste Quellen: 
+    https://github.com/SREERAJSVT/Angle-MPU6050-Gyroscope
+    https://electronics.stackexchange.com/questions/142037/calculating-angles-from-mpu6050
+    https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf
+*/
+
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
