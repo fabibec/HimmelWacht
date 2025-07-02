@@ -1,12 +1,79 @@
 \section{Dualshock4 Treiber (Becker)}
 
+Gemäß der Anforderung ist die Steuerung des Fahrzeugs sowie der Geschützplattform durch einen DualShock4-Controller vorgesehen. 
+Einerseits dient dies dem Testen der Plattformsteuerung für den späteren Betrieb der KI. 
+Des Weiteren fungiert sie als Gamification-Element. 
+Das Ziel ist die Steigerung des Nutzens und der Freude an dem Projekt, indem eine bekannte Steuerungsmethode verwendet wird, welche die Benutzerfreundlichkeit erhöht.
+
+Für die Realisierung dieser Funktionalität wurde ein spezieller Treiber entwickelt, der den Zustand des Controllers in regelmäßigen Abständen an den ESP-32 übermittelt. 
+Darüber hinaus umfasste mein Wunsch eine Funktion, die Vibrationen und Farbwechsel am Gamepad auslöst, und zwar vom Mikrocontroller aus.
+
 \subsection{Übertragung}
 
+Vor jeglicher Datenübertragung muss zunächst eine Kopplung per Bluetooth hergestellt werden. 
+Der Sony Dualshock 4 Controller verwendet in diesem Fall den Bluetooth Classic 4.0 Standard.
+Für die Verbindung des Controllers mit den Geräten ist im Flash-Speicher des Gamepads eine MAC-Adresse gespeichert. 
+Beim Anschalten des Controllers wird versucht, Kontakt zu dieser Adresse aufzubauen.
+Unter normalen Betriebsbedingungen wäre dies die Adresse der PlayStation4-Konsole. 
+Für unser Projekt wurde jedoch die gespeicherte MAC-Adresse mit der des ESP-32 überschrieben.
+Nach dem Einschalten unternimmt das Gamepad sofort den Versuch, sich mit dem Mikrocontroller zu verbinden.
+
+Die Übertragung der Daten zwischen Gamepad und Mikrocontroller erfolgt mittels sogenannter HID-Reports.
+HID-Reports sind binäre Datenstrukturen, welche die Reihenfolge der Informationen festlegen.
+Die Struktur der Reports wurde von Sony nicht öffentlich zur Verfügung gestellt. 
+Allerdings war es einigen Personen möglich, durch Reverse-Engineering wichtige Felder zu ermitteln \cite{esp_ds4_hid_reports}.
+
+Das Human Interface Device (HID)-Protokoll ist ein standardisiertes Kommunikationsprotokoll zur Übertragung von Eingabe- und Steuerdaten zwischen Peripheriegeräten (z.B. Tastaturen, Mäusen, Gamepads) und einem Host-System. 
+Es wurde ursprünglich für USB spezifiziert \cite{esp_usb_hid_spec} und später für Bluetooth Classic übernommen.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/becker_esp32_ds4_report.png}
+    \caption{Beispielhafter Aufbau eines HID-Reports aus \cite{esp_ds4_hid_reports}}
+\end{figure}
+
 \subsection{Version 1: eigens entwickelter Treiber}
+
+Eine Websuche nach existierenden DualShock-4-Treibern für das ESP-IDF brachte zunächst nur veraltete Implementierungen zutage, die auf nicht mehr unterstützten APIs basierten. 
+Zahlreiche andere Ansätze zielten ausschließlich auf das Arduino-Framework ab und ließen sich daher nur eingeschränkt oder gar nicht in ein ESP-IDF-basiertes Projekt integrieren.
+
+Da die Struktur der vom Gamepad gesendeten HID-Reports dank Reverse Engineering bekannt war und das ESP-IDF über eine Bluetooth-HID-Host-API verfügte \cite{esp_hib_bt_api}, wurde im ersten Ansatz ein eigener Treiber entwickelt.
+
+Der Verbindungsaufbau verlief problemlos, und zu Beginn wurden die Input-Reports korrekt empfangen. 
+Nach kurzer Zeit fror die Datenübertragung jedoch ein, obwohl alle anderen Tasks auf dem System weiterhin fehlerfrei ausgeführt wurden. 
+Recherchen ergaben, dass dieses Verhalten auch von anderen Nutzern beobachtet wurde \cite{esp_hib_bt_api_issues}. 
+Als Ursache wird die vergleichsweise hohe Sendefrequenz des Controllers vermutet, die laut Nutzertests bei über 700 Hz liegt \cite{esp_ds4_hid_reports}.
+
+Um den Overhead in der Callback-Funktion für empfangene Reports zu reduzieren, wurde ein Zeitfilter implementiert. 
+Ein Timer prüft beim Eintreffen eines Reports, ob seit dem letzten verarbeiteten Report mindestens $16.\overline{6}$ ms (entsprechend 60 Hz) vergangen sind. 
+Ist dies der Fall, wird der aktuelle Report in eine durch FreeRTOS bereitgestellte Queue eingereiht. 
+Diese wird von einem separaten Task abgearbeitet, der die Reports auf der Konsole protokolliert. 
+Auf diese Weise konnte das Logging, das potenziell blockierend wirkt, vom zeitkritischen Pfad entkoppelt werden.
+
+Obwohl diese Maßnahme die Zeitspanne, in der die Daten stabil übertragen wurden, verlängerte, wurde das zugrundeliegende Problem damit nicht vollständig gelöst. 
+Nach einigen Minuten unterbrach der Controller die Übertragung der Reports erneut, obwohl die Status-LED weiterhin eine aktive Bluetooth-Verbindung anzeigte.
+
+Da der ESP-32 in dieser Anwendung zusätzlich weitere zeitkritische Komponenten wie den Motortreiber verwalten muss, ist die Stabilität und Effizienz des Treibers von zentraler Bedeutung.
+Aus diesem Grund wurde entschieden, die Entwicklung eines eigenen Treibers nicht weiter zu verfolgen und stattdessen nach einer robusteren und getesteten Alternative zu suchen.
 
 \subsection{Version 2: Treiber basierend auf der Bluepad32 Bibliothek}
 
 \subsection{Testing}
+
+Um den funktionierenden Treiber zu testen wurden zwei Tasks auf dem ESP-32 erstellt:
+
+\begin{itemize}
+    \item \textbf{Input-Test Task}: Dieser Task wartet vor jedem Schleifendurchlauf auf verbinden, das bedeutet er ist so lange blockiert, bis der Dualshock-Controller die Verbindung hergestellt hat.
+    Dann wartet er an der Input Queue bis der Controller einen Zustandsreport schickt. Dieser wir dann aus der Queue entnommen und auf der Konsole ausgegeben. Zuletzt wird $16.\overline{6}$ ms (60 Hz) gewartet.
+    \item \textbf{Output-Test Task}: Hier wird ebenfalls blockiert bis das Gamepad verbunden ist. Nach dem die Verbindung aufgebaut ist wird je ein Vibrations- und Farbwechselevent in die Queue gelegt. 
+    Da dass Vibrationsevent eine Dauer von 100 ms bekommen hat wird hier 100 ms gewartet.
+\end{itemize}
+
+Mit diesem simplen Testsetup konnten alle Funktionen des Controller getestet werden. 
+Auch das Fortfahren nach einem Verbindungsabbruch konnten durch Aus- und Einschalten des Gamepads getestet werden. 
+
+Bei Testen fiel weiterhin auf, dass die Batteriestandswarnung dauerhaft ausgelöst war, ein Blick auf die Input Werte zeigte, dass der Controller eine komplette leere Batterie anzeigte. 
+Auch nach dem Aufladen fielen die Werte schnell wieder auf 0, obwohl am PC ganz andere Ladestände angezeigt wurden. (WIP!)
 
 \section{Platformsteuerung (Becker)}
 
