@@ -1,0 +1,50 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "../esp-idf-v5.4.1/**",
+                "${workspaceFolder}/components/interfaces/**",
+                "${workspaceFolder}/components/drivers/**",
+                "${workspaceFolder}/components/interfaces/diff-drive/include",
+                "${workspaceFolder}/components/drivers/motor-driver/include",
+                "../esp-idf-v5.4.1/components/driver/deprecated",
+                "../esp-idf-v5.4.1/components/hal/include",
+                "${workspaceFolder}/components/drivers/ds4-driver/include",
+                "${workspaceFolder}/components/drivers/wifi-stack/include",
+                "../bluepad32-v4.2.0/**",
+                "../esp-idf-v5.4.1/components/freertos/FreeRTOS-Kernel-SMP/include",
+                "../esp-idf-v5.4.1/components/freertos/config/include/freertos",
+                "${workspaceFolder}/build/config",
+                "../esp-idf-v5.4.1/components/freertos/config/linux/include",
+                "../esp-idf-v5.4.1/components/freertos/FreeRTOS-Kernel-SMP/portable/linux/include/freertos",
+                "../esp-idf-v5.4.1/components/esp_common/include",
+                "../esp-idf-v5.4.1/components/freertos/FreeRTOS-Kernel-SMP/portable/linux/include",
+                "../esp-idf-v5.4.1/components/freertos/esp_additions/include",
+                "../esp-idf-v5.4.1/components/heap/include",
+                "../esp-idf-v5.4.1/components/esp_event/include",
+                "../esp-idf-v5.4.1/components/nvs_flash/include",
+                "../esp-idf-v5.4.1/components/esp_wifi/include",
+                "../esp-idf-v5.4.1/components/esp_hw_support/include",
+                "../esp-idf-v5.4.1/components/linux/include",
+                "../esp-idf-v5.4.1/components/esp_partition/include",
+                "../esp-idf-v5.4.1/components/log/include",
+                "../esp-idf-v5.4.1/components/esp_rom/include",
+                "../esp-idf-v5.4.1/components/esp_rom/linux/include/linux",
+                "../esp-idf-v5.4.1/components/mqtt/esp-mqtt/include",
+                "${workspaceFolder}/components/interfaces/mqtt-stack/include"
+            ],
+            "defines": [
+                "ESP_PLATFORM",
+                "CONFIG_FREERTOS_UNICORE=0",
+                "I2C_CLK_SRC_DEFAULT=0"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

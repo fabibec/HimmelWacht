@@ -1,5 +1,7 @@
 # Ignore DS_Store files from MAC
 .DS_Store
+
+# Ignore FreeCAD Temp Files
 **/*.FCBak
 
 ## Core latex/pdflatex auxiliary files:
@@ -328,3 +330,6 @@ TSWLatexianTemp*
 # option is specified. Footnotes are the stored in a file with suffix Notes.bib.
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
+
+# ESP32 Build folder
+esp/HimmelWachtEsp32/build/
