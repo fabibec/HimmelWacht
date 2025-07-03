@@ -1,11 +1,13 @@
 // angepasste Quelle: https://github.com/jarzebski/Arduino-KalmanFilter
 
 #include "kalman.h"
+
 Kalman::Kalman()
 {
-    Q_angle = 0.0001f;  
-    Q_bias = 0.0003f;
-    R_measure = 0.0001f; 
+    Q_angle = 0.01f;  // Trust in gyro
+    Q_bias  = 0.03f;  // Trust in bias estimate
+    R_measure = 0.01f; // Trust in accelerometer
+
     
     angle = 0.0f;
     bias = 0.0f;
@@ -48,4 +50,9 @@ float Kalman::update(float newAngle, float newRate, float dt)
     P[1][1] -= K[1] * P01_temp;
 
     return angle;
+}
+
+void Kalman::setAngle(float newAngle) {
+    angle = newAngle;
+    bias = 0.0f;
 }
