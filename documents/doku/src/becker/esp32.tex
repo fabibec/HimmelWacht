@@ -1,3 +1,21 @@
+\chapter{ESP32 Programmierung}
+
+\section{Einführung (Becker, Specht)}
+
+Die Programmierung der zeitkritischen Funktionalitäten erfolgt unter Verwendung eines \mbox{ESP-32}, da bestimmte Funktionen strengere zeitliche Anforderungen aufweisen, als dies mit einem General-Purpose-Betriebssystem realisierbar wäre.
+
+Nach Abwägung aller relevanten Faktoren wurde sich dazu entschieden, den klassischen \mbox{ESP-32} Chip zu wählen, da dieser den Bluetooth Classic Standard unterstützt. 
+Dieses Protokoll wird für die Ansteuerung des Dualshock4-Controllers benötigt.
+Darüber hinaus trägt das weite Verbreitungsgebiet dieser Serie dazu bei, dass eine Vielzahl an Material zur Verfügung steht, was wiederum die Fehlersuche erheblich vereinfacht.
+
+Es wurde jedoch ausdrücklich darauf verzichtet, den Controller unter Verwendung des Arduino Frameworks zu programmieren. 
+Die Ursache hierfür war insbesondere die Größe der entstehenden Kompilate. 
+Es sei darauf hingewiesen, dass das System über zahlreiche Funktionalitäten verfügt, was eine begrenzte Speicherverfügbarkeit zur Folge hat. 
+Daher erfolgte die Programmierung des Controllers unter Verwendung des \textit{Espressif IoT Development Frameworks} (ESP-IDF) \cite{esp_esp_idf}. 
+Dieses Framework stellt ebenfalls eine Vielzahl von Treibern für unterschiedliche Funktionen bereit, ist jedoch gezielt für Espressif-Controller konzipiert und zeichnet sich dadurch aus, dass es einen geringen Speicherplatzbedarf aufweist. 
+
+Die Programmierung erfolgte in der Programmiersprache C und nutzt das Betriebssystem FreeRTOS, welches von Espressif auf Multiprozessoren portiert wurde.
+
 \section{Dualshock4 Treiber (Becker)}
 
 Gemäß der Anforderung ist die Steuerung des Fahrzeugs sowie der Geschützplattform durch einen DualShock4-Controller vorgesehen. 
@@ -75,7 +93,7 @@ Auch das Fortfahren nach einem Verbindungsabbruch konnten durch Aus- und Einscha
 Bei Testen fiel weiterhin auf, dass die Batteriestandswarnung dauerhaft ausgelöst war, ein Blick auf die Input Werte zeigte, dass der Controller eine komplette leere Batterie anzeigte. 
 Auch nach dem Aufladen fielen die Werte schnell wieder auf 0, obwohl am PC ganz andere Ladestände angezeigt wurden. (WIP!)
 
-\section{Platformsteuerung (Becker)}
+\section{Plattformsteuerung (Becker)}
 
 Die sogenannte Plattformsteuerung bezeichnet alle technischen Komponenten, die erforderlich sind, um die Plattform in ihrer Rotation, vertikalen Neigung sowie für die Abgabe eines Schusses zu steuern.
 
@@ -196,5 +214,3 @@ Im Rahmen dieses Projekts waren keine Änderungen der Richtung oder präzisere S
 Im Rahmen des manuellen Tests wurde festgestellt, dass zur Erzielung eines optimalen Schussbildes eine Versorgung der Motoren mit 5 Volt erforderlich ist. 
 Infolgedessen beträgt der Duty-Cycle entweder 0 oder 100 Prozent.
 Daher wurde der ursprüngliche PWM-Code letztlich auf das reine Ein- und Ausschalten eines GPIO-Pins reduziert.
-
-\section{Integration (Becker, Specht)}

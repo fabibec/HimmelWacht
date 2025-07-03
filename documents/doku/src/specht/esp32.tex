@@ -1,21 +1,3 @@
-\chapter{ESP32 Programmierung}
-
-\section{Einführung (Becker, Specht)}
-
-Die Programmierung der zeitkritischen Funktionalitäten erfolgt unter Verwendung eines \mbox{ESP-32}, da bestimmte Funktionen strengere zeitliche Anforderungen aufweisen, als dies mit einem General-Purpose-Betriebssystem realisierbar wäre.
-
-Nach Abwägung aller relevanten Faktoren wurde sich dazu entschieden, den klassischen \mbox{ESP-32} Chip zu wählen, da dieser den Bluetooth Classic Standard unterstützt. 
-Dieses Protokoll wird für die Ansteuerung des Dualshock4-Controllers benötigt.
-Darüber hinaus trägt das weite Verbreitungsgebiet dieser Serie dazu bei, dass eine Vielzahl an Material zur Verfügung steht, was wiederum die Fehlersuche erheblich vereinfacht.
-
-Es wurde jedoch ausdrücklich darauf verzichtet, den Controller unter Verwendung des Arduino Frameworks zu programmieren. 
-Die Ursache hierfür war insbesondere die Größe der entstehenden Kompilate. 
-Es sei darauf hingewiesen, dass das System über zahlreiche Funktionalitäten verfügt, was eine begrenzte Speicherverfügbarkeit zur Folge hat. 
-Daher erfolgte die Programmierung des Controllers unter Verwendung des \textit{Espressif IoT Development Frameworks} (ESP-IDF) \cite{esp_esp_idf}. 
-Dieses Framework stellt ebenfalls eine Vielzahl von Treibern für unterschiedliche Funktionen bereit, ist jedoch gezielt für Espressif-Controller konzipiert und zeichnet sich dadurch aus, dass es einen geringen Speicherplatzbedarf aufweist. 
-
-Die Programmierung erfolgte in der Programmiersprache C und nutzt das Betriebssystem FreeRTOS, welches von Espressif auf Multiprozessoren portiert wurde.
-
 \section{Motor-Treiber (Specht)}
 
 Wesentlich für den Einstieg in die Motor-Treiber-Programmierung waren die verwendeten Hardware-Komponenten. Folgende Teile wurden verwendet:
@@ -25,7 +7,7 @@ Wesentlich für den Einstieg in die Motor-Treiber-Programmierung waren die verwe
     \item 2x MFA/Como Drills 919D501
 \end{itemize}
 
-Im ersten Ansatz wurde der Versuch unternommen, den Low-Level-Treiber (LL-Treiber) direkt mit der Differenzialantriebs-Logik (Differential Drive) zu koppeln. Nach intensiver Recherche und ersten Programmieransätzen wurde jedoch deutlich, dass eine klare Trennung beider Ebenen unter modularen Gesichtspunkten vorzuziehen ist. Diese Trennung resultiert in einer signifikanten Steigerung sowohl der Wiederverwendbarkeit als auch der Wartbarkeit des Codes. Abhilfe schafften hierbei vor allem die Verwendung von ESP-IDF-Komponenten.\newline
+Im ersten Ansatz wurde der Versuch unternommen, den Low-Level-Treiber (LL-Treiber) direkt mit der Differenzialantriebs-Logik (Differentialantrieb) zu koppeln. Nach intensiver Recherche und ersten Programmieransätzen wurde jedoch deutlich, dass eine klare Trennung beider Ebenen unter modularen Gesichtspunkten vorzuziehen ist. Diese Trennung resultiert in einer signifikanten Steigerung sowohl der Wiederverwendbarkeit als auch der Wartbarkeit des Codes. Abhilfe schafften hierbei vor allem die Verwendung von ESP-IDF-Komponenten.\newline
 
 Um die Ansteuerung der Motoren zu realisieren, war es von zentraler Bedeutung, die Spezifikationen der verwendeten Hardware zu berücksichtigen. Das Datenblatt der Pololu-Motor-Treiber wurde in Form einer Webseite gefunden. Die darin enthaltenen Informationen waren ausreichend, um die Logik zu implementieren. Für die verwendeten Motoren lieferte das Datenblatt insbesondere elektrische Kenngrößen, die für die Absicherung der Hardware von entscheidender Bedeutung waren. Dazu zählten maximale und nominale Ströme. Zu Beginn des Projektes konnte nur auf einen 6V-Akku zurückgegriffen werden, obwohl die Motoren bis zu 12V-Betriebsspannung zulassen. Daraufhin wurden entsprechende Widerstände auf den Treiberboards angebracht, um den maximalen Strom für 6V zu begrenzen. Des Weiteren konnte aus dem Datenblatt des Pololu-Motor-Treibers die Notwendigkeit überdimensionierter Kondensatoren abgeleitet werden, um eine gute und stabile Performance sicherzustellen. \newline
 
@@ -55,32 +37,49 @@ Ein weiterer wichtiger Baustein sollte das automatisierte Erkennen von Fehlern d
     \label{fig:motor_driver_fault_pin}
 \end{figure}
 
-Der Fault-Pin ist laut Datenblatt ein Open-Drain-Ausgang, der bei einem Fehler auf Low gezogen wird. Im Testaufbau wurde ein Pull-Up-Widerstand von 10 k$\Omega$ verwendet, um den Pin im Normalfall auf High zu halten. Folgendes Verhalten wurde erwartet: Bei einem Fehler wird der Pin auf Low gezogen und die LED leuchtet auf. Dies war jedoch nicht der Fall. Stattdessen leuchtete die LED dauerhaft, obwohl der Motor einwandfrei funktionierte. Nach Rücksprache mit dem Betreuer stellte sich heraus, dass dieser Pin in der Vergangenheit nie benutzt wurde. Um den Projektfortschritt nicht unnötig zu gefährden, wurde beschlossen, den Fault-Pin nicht weiter zu verwenden und mit der Implementierung des Differential Drive fortzufahren.
+Der Fault-Pin ist laut Datenblatt ein Open-Drain-Ausgang, der bei einem Fehler auf Low gezogen wird. Im Testaufbau wurde ein Pull-Up-Widerstand von 10 k$\Omega$ verwendet, um den Pin im Normalfall auf High zu halten. Folgendes Verhalten wurde erwartet: Bei einem Fehler wird der Pin auf Low gezogen und die LED leuchtet auf. Dies war jedoch nicht der Fall. Stattdessen leuchtete die LED dauerhaft, obwohl der Motor einwandfrei funktionierte. Nach Rücksprache mit dem Betreuer stellte sich heraus, dass dieser Pin in der Vergangenheit nie benutzt wurde. Um den Projektfortschritt nicht unnötig zu gefährden, wurde beschlossen, den Fault-Pin nicht weiter zu verwenden und mit der Implementierung des Differentialantrieb fortzufahren.
 
-\subsection{Low-Level Treiber Test}
+\subsection{Testing}
 
 Das Testing unterteilte sich in mehrere Schritte. Für die Erstellung der Testfälle wurde dabei zum Großteil KI-generierter Code verwendet. Dadurch konnte der damit verbundene Zeitaufwand signifikant minimiert und zugleich eine ausreichende Testabdeckung garantiert werden. \newline
 
 Zunächst sollte die grundlegende Funktionalität des LL-Treibers getestet werden. Dazu wurden LEDs auf einem Breadboard angebracht, welche die Motoren simulieren sollten. Die Helligkeit der LEDs sollte dabei die Geschwindigkeit des Motors repräsentieren. \newline
 
-Nach erfolgreicher Validierung der Ergebnisse wurde der Testaufbau an die echte Hardware angepasst. Zudem sollte ein Wrapper erstellt werden, der beide Motoren über einzelne Treiber-Objekte anspricht. Dies stellte somit eine Vorstufe zum Differential Drive dar. Ziel war es, die beiden Motoren unabhängig voneinander ansteuern zu können. Dafür wurde das Fahrzeug auf einer Holzkonstruktion bestehend aus zwei Holzlatten platziert. Obwohl die Tests positiv verliefen, sollte sich der Test ohne Bodenkontakt im weiteren Projektverlauf als suboptimal herausstellen.
+Nach erfolgreicher Validierung der Ergebnisse wurde der Testaufbau an die echte Hardware angepasst. Zudem sollte ein Wrapper erstellt werden, der beide Motoren über einzelne Treiber-Objekte anspricht. Dies stellte somit eine Vorstufe zum Differentialantrieb dar. Ziel war es, die beiden Motoren unabhängig voneinander ansteuern zu können. Dafür wurde das Fahrzeug auf einer Holzkonstruktion bestehend aus zwei Holzlatten platziert. Obwohl die Tests positiv verliefen, sollte sich der Test ohne Bodenkontakt im weiteren Projektverlauf als suboptimal herausstellen.
 
-\subsection{Differential Drive}
+\subsection{Differentialantrieb}
 
-- Begriff Differential Drive, woher abgeleitet, was bedeutet es: in unserem Fall beide Reifen je Seite über einen Motor angetrieben, der über Keilrippenriemen an die beiden Reifen angeschlossen ist.
+Die Grundidee des Differentialantriebs ist aus der Robotik abgeleitet und beschreibt eine Antriebsart, bei der die Bewegung eines Fahrzeugs durch die unterschiedliche Drehgeschwindigkeit der Räder auf beiden Seiten gesteuert wird (cite paper). In diesem Fall sind an jeder Seite des Fahrzeugs zwei Räder angebracht. Die beiden Räder jeder Seite werden von einem Motor angetrieben, der über einen Keilrippenriemen mit den Rädern verbunden ist. Dies hat den Vorteil, dass die Balance des Fahrzeugs verbessert wird und eine höhere Stabilität erreicht wird. Die Konstruktion konnte aus einem Projekt des Vorsemesters übernommen werden. \newline
 
-Der Anspruch an die Differential Drive Logik war, eine Logik zur Verfügung zu stellen, um Controllerwerte auf entsprechende Geschwindigkeiten und Richtungen umzurechnen. Nach erfolgreicher Berechnung werden die Werte an eine Queue gesendet werden, die ein Task zyklisch abgreift und letztendlich auf die Motoren appliziert.
+Um ein reibungsloses Fahrerlebnis zu gewährleisten, ist es notwendig, die Geschwindigkeit und Richtung der Motoren individuell steuern zu können. Dies wird durch die Verwendung des zuvor beschriebenen LL-Treibers erreicht. Pro Motor wird ein Handle des LL-Treibers erstellt. \newline
 
-\begin{figure}[h]
+Der Fahralgorithmus wurde so konzipiert, dass er die Controllerwerte des PS4-Controllers in Geschwindigkeiten und Richtungen umwandelt. Der Wertebereich für die horizontale Achse (Lenkung) reicht von -512 bis +512, wobei -512 die maximale linke Lenkung und +512 die maximale rechte Lenkung darstellt. Der Wertebereich für die vertikale Achse (Fahren) reicht von +512 bis -512. Da diese Skalierung unintuitiv ist, wurde das Vorzeichen gedreht. Somit steht -512 für die maximale Rückwärtsfahrt und +512 für die maximale Vorwärtsfahrt. Ein Wert von 0 bedeutet, dass der Stick in der Mitte ist und somit keine Bewegung stattfindet. Dieses Szenario ist aufgrund des Stick-Drifts des linken Sticks jedoch nicht gegeben. Eine zusätzliche Prüfung im Code auf eine sog. Deadzone ist mit überschaubarem Aufwand zu erzielen, wurde aufgrund eines Workaround, der zudem auch die Anzahl der Befehle in der Queue reduziert, jedoch nicht implementiert. Weitere Informationen dazu sind im Abschnitt \ref{sec:diff_drive_integration} zu finden. \newline
+
+Die Logik des Fahralgorithmus stützt sich dabei auf folgende Spezifikationen:
+
+\begin{itemize}
+    \item Synchrones Fahren: Beide Motoren mit gleicher Geschwindigkeit.
+    \item Lenkung Fahren: Unterscheidung zwischen sanfter und harter Lenkung.
+    \begin{itemize}
+        \item Sanft: Inneren Motor stoppen.
+        \item Hart: Inneren Motor entgegengesetzt.
+    \end{itemize}
+    \item Stop: Beide Motoren stoppen.
+    \item Drehung Stand: Je nach Richtung Motoren entgegengesetzt.
+\end{itemize}
+
+Für das synchrone Fahren und die Drehung im Stand ist es wichtig, dass kleinere Änderungen wie beispielswiese Stick-Drift oder nicht perfekte Haltung des Sticks nicht unnötig zu einer abrupten Änderung führen. Deshalb wurde für das synchrone Fahren ein Hysteresebereich in X-Richtung von $|75|$ festgelegt. Befindet sich die vertikale Achse innerhalb dieses Bereichs, so bestimmt die horizontale Achse die Geschwindigkeit. Selbiges gilt für die Drehung im Stand, wobei hier der Hysteresebereich in Y-Richtung von $|75|$ festgelegt wurde und die horizontale Achse die Drehrichtung bestimmt. Um dies in Kombination mit der Nullposition und den anderen Parametern zu verdeutlichen, wurde eine Abbildung erstellt, die die Logik des Differentialantriebs veranschaulicht. \newline
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{images/diff_drive_logic.png}
-    \caption{Differnetial Drive Logik}
+    \includegraphics[width=0.85\textwidth]{images/diff_drive_logic.png}
+    \caption{Differentialantrieb Logik}
     \label{fig:diff_drive_logic}
 \end{figure}
 
-Im Zentrum der Abbildung~\ref{fig:diff_drive_logic} befindet sich die Nullposition. In der Vehicle-Control wird sichergestellt, dass die 
+Im Zentrum der Abbildung~\ref{fig:diff_drive_logic} befindet sich die Nullposition. Der Grund dafür wird im Abschnitt \ref{sec:diff_drive_integration} erläutert. Die beiden Kanäle im Bereich $|75|$ in X- bzw. Y-Richtung sind die Hysteresebereiche für die Geschwindigkeit bzw. die Drehung im Stand. Die äußeren Bereiche sind für das Fahren mit Lenkung relevant. Die 70 \% Markierungen symbolisieren dabei die Abgrenzung zwischen sanfter und harter Lenkung.
 
-\subsection{Tests} \label{sec:diff_drive_tests}
+\subsection{Testing} \label{sec:diff_drive_tests}
 
 Wie beim Testing des Low-Level Treibers, wurde der Code auch hier größtenteils KI-generiert. In der Summe gab es zwei Testszenarien:
 
@@ -96,18 +95,6 @@ Für Debuggung-Zwecke bietet das verwendete Framework ESP-IDF einen Loggingmecha
 Folgendes Verhalten wurde festgestellt: Die Werte wurden korrekt berechnet, die Queue jedoch nicht richtig abgearbeitet. Das Problem lag bei der Initialisierung der Queue, welche Steuerbefehle entgegennimmt. Die API erlaubt es, Pointer auf Structs oder die komplette Größe des Structs als Queuewerte festzulegen. Im Code wurde beim Laden der Werte aus der Queue das komplette Struct angegeben, beim Laden in die Queue hingegen nur ein Pointer. Aufgrund der Pointergröße konnten nur die ersten 8-Byte richtige Werte enthalten, der Rest enthielt Zufallswerte. Durch Padding/Aligning des Compilers wurde die erste Variable (Speed links, float, 4 Byte) offensichtlich auf 8 Byte skaliert. Dadurch kam es zu dem undefinierten Verhalten, dass nur die linke Seite eine Drehzahl hatte. Die Richtung wurde aus einem Standardwert übernommen. Bei der rechten Seite traf man die Annahme, dass ein Zufallswert aus dem Speicher genommen wurde. Mit großer Wahrscheinlichkeit war dieser außerhalb des Bereichs, weshalb 0 (keine Drehzahl) angenommen wurde. Nach Anpassung des Übergabeparameters liefen beide Motoren mit der gewünschten Geschwindigkeit und die Richtungen entsprechend korrekt gewechselt. \newline
 
 Im zweiten Fall wurde das Fahrzeug auf den Boden des Labors gestellt. Nach einem Timeout von 10 Sekunden sollte das Fahrzeug eine spezifizierte Routine durchlaufen, bei der das Drehverhalten im Stand, Beschleunigen bzw. Abbremsen und gegensätzliches Lenken getestet wurde. Die Beschleunigungstests verliefen durchwegs positiv. Tests, welche hingegen mit einer Drehung des Fahrzeugs bzw. Lenkung in Verbindung standen, wurden nicht erfolgreich abgeschlossen. Erste Versuche, die Ursache zu finden, ließen darauf schließen, dass die Motoren nicht ausreichend Leistung haben, um das Fahrzeug zu drehen. Nach eingehenden Untersuchungen - auch in Verbindung mit dem Betreuer - im Labor wurde festgestellt, dass die zuvor aufgelöteten Widerstände, die den Strom bei 6V Betriebsspannung begrenzen sollten, zu hoch dimensioniert waren. Selbst beim Anlegen einer höheren Spannung von 12V war es nicht möglich, das Fahrzeug zu drehen. Nach Entfernen der Widerstände und Anlegen von 12V Betriebsspannung konnte das Fahrzeug wie gewünscht drehen. \newline
-
-\subsection{Integration}
-
-In diesem Schritt sollte die Ansteuerung der Differential Drive Logik in die Vehicle-Control integriert werden. Die Vehicle-Control ist eine Abstraktionsebene, die als zentrale Anlaufstelle für Befehle vom Controller dient. Darin ist der Haupttask implementiert, der die Steuerbefehle entgegennimmt und an die entsprechenden Queues weiterleitet. Diese Queues werden dann von den Tasks der jeweiligen Komponenten abgearbeitet. Neben der Geschütz- und der Feuersteuerung ist die Ansteuerung der Differential Drive Logik eine der zentralen Komponenten. \newline
-
-Die Integration in die bestehende Vehicle-Control war relativ unkompliziert, da das Abgreifen der Steuerbefehle über den PS4-Treiber einfach handzuhaben ist. Ein Struct enthält alle notwendigen Stick- bzw. Button-Werte, die am Controller gedrückt werden. Problematisch war jedoch der Stick-Drift des linken Sticks, denn dadurch wurde der PS4-Treiber ständig mit Werten versorgt, was zu einer permanenten Anpassung der Geschwindigkeit führte. Die ersten Befehle konnten teilweise noch übermittelt werden, jedoch lief nach kurzer Zeit die Queue über und es kam zu einem Absturz des Programms. \newline
-
-Die Lösung des Problems bestand darin, den Stick-Drift einzudämmen. Daraufhin wurde durch Ausprobieren am Fahrzeug ein Wert ermittelt, ab dem ein neuer Befehl interpretiert werden sollte. Dieser Wert wurde in der Vehicle-Control als Deadzone definiert. Wenn der linke Stick des Controllers innerhalb dieser Deadzone bewegt wird, wird die Geschwindigkeit des Fahrzeugs nicht angepasst. Dadurch wird verhindert, dass die Queue überläuft und das Programm abstürzt. \newline
-
-Allerdings wurde infolgedessen festgestellt, dass die Queue im Stand überläuft, wenn der linke Stick nicht bewegt wird. Das Problem war, dass die Vehicle-Control die Nullposition als normalen Fahrbefehl interpretierte und somit ständig Werte sendete. \newline
-
-Deshalb wurde, wie im Zentrum der Abbildung~\ref{fig:diff_drive_logic} zu sehen, eine Nullposition definiert. Diese wird beim Auftreten, sprich Nicht-Bewegen des linken Sticks, detektiert. Daraufhin wird ein Stop eingeleitet. Sobald dieser abgearbeitet wurde wird ein Flag gesetzt, das anzeigt, dass die Nullposition bereits abgearbeitet wurde. Somit wird verhindert, dass das Stoppen unnötig wiederholt wird und die Queue überläuft. Sobald der linke Stick wieder bewegt wird, wird das Flag zurückgesetzt und die Geschwindigkeit des Fahrzeugs angepasst. \newline
 
 \section{MQTT-Anbindung (Specht)}
 
@@ -143,7 +130,26 @@ Das Kommando \textit{fire\_command} ist ein boolescher Wert, der angibt, ob das 
 
 Die Nachrichten werden über den Topic \textit{vehicle/control} gesendet. Da im Projekt MQTT über TCP implementiert wrude, ist es potentiell möglich, dass von anderen Netzwerkteilnehmern Nachrichten an den Topic gesendet werden. Dies wurde jedoch nicht weiter berücksichtigt, da das Fahrzeug in einem dedizierten Netzwerk betrieben wird. \newline
 
+\subsection{Testing}
+
 Erste Tests der MQTT-Komponente konnten ohne Fahrzeug durchgeführt werden. Dazu wurde \textit{mosquitto} als MQTT-Broker auf dem Rechner installiert. Mit Hilfe des Tools \textit{mosquitto\_pub} können Nachrichten an den Topic gesendet werden. Mittels der bereits unter Abschnitt~\ref{sec:diff_drive_tests} beschriebenen Logging-Funktionalität des ESP-IDF konnte die korrekte Verarbeitung der Nachrichten mit Hilfe von Konsolenausgaben überprüft werden. Die Nachrichten wurden dabei korrekt empfangen.
 
-\subsection{Integration}
+\section{Integration/Fahrzeugsteuerung (Becker, Specht)}
 
+Die Fahrzeugsteuerung ist eine Abstraktionsebene, die als zentrale Anlaufstelle für Befehle vom Controller dient. Darin ist der Haupttask implementiert, der die Steuerbefehle entgegennimmt und an die entsprechenden Queues weiterleitet. Diese Queues werden dann von den Tasks der jeweiligen Komponenten abgearbeitet. Neben der Geschütz- und der Feuersteuerung ist auch die Ansteuerung der Differentialantrieb Logik eine der zentralen Komponenten. Darüber hinaus ist die Fahrzeugsteuerung auch das Modul, das letztendlich in der Main-Methode mithilfe diverser komponenten-spezifischer Strukturen initialisiert wird. \newline
+
+\subsection{Dualshock4 Treiber (Becker)}
+
+\subsection{Plattformsteuerung (Becker)}
+
+\subsection{Differentialantrieb (Specht)} \label{sec:diff_drive_integration}
+
+Die Integration in die bestehende Code-Basis war relativ unkompliziert, da das Abgreifen der Steuerbefehle über den PS4-Treiber einfach handzuhaben ist. Ein Struct enthält alle notwendigen Stick- bzw. Button-Werte, die am Controller gedrückt werden. Problematisch war jedoch der Stick-Drift des linken Sticks, denn dadurch wurde der PS4-Treiber ständig mit Werten versorgt, was zu einer permanenten Anpassung der Geschwindigkeit führte. Die ersten Befehle konnten teilweise noch übermittelt werden, jedoch lief nach kurzer Zeit die Queue über und es kam zu einem Absturz des Programms. \newline
+
+Die Lösung des Problems bestand darin, den Stick-Drift einzudämmen. Daraufhin wurde durch Ausprobieren am Fahrzeug ein Wert ermittelt, ab dem ein neuer Befehl interpretiert werden sollte. Dieser Wert wurde in der Fahrzeugsteuerung als Deadzone definiert. Wenn der linke Stick des Controllers innerhalb dieser Deadzone bewegt wird, wird die Geschwindigkeit des Fahrzeugs nicht angepasst. Dadurch wird verhindert, dass die Queue überläuft und das Programm abstürzt. \newline
+
+Allerdings wurde infolgedessen festgestellt, dass die Queue im Stand überläuft, wenn der linke Stick nicht bewegt wird. Das Problem war, dass die bis dato verwendete Logik die Nullposition als normalen Fahrbefehl interpretierte und somit ständig Werte sendete. \newline
+
+Deshalb wurde, wie im Zentrum der Abbildung~\ref{fig:diff_drive_logic} zu sehen, eine Nullposition definiert. Diese wird beim Auftreten, sprich Nicht-Bewegen des linken Sticks, detektiert. Daraufhin wird ein Stop eingeleitet. Sobald dieser abgearbeitet wurde wird ein Flag gesetzt, das anzeigt, dass die Nullposition bereits abgearbeitet wurde. Somit wird verhindert, dass das Stoppen unnötig wiederholt wird und die Queue überläuft. Sobald der linke Stick wieder bewegt wird, wird das Flag zurückgesetzt und die Geschwindigkeit des Fahrzeugs angepasst. \newline
+
+\subsection{MQTT-Anbindung (Specht)}
