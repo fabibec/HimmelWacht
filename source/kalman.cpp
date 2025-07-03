@@ -51,8 +51,3 @@ float Kalman::update(float newAngle, float newRate, float dt)
 
     return angle;
 }
-
-void Kalman::setAngle(float newAngle) {
-    angle = newAngle;
-    bias = 0.0f;
-}
