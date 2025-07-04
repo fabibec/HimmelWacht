@@ -1,3 +1,4 @@
+# @author : Nicolas Koch
 import asyncio
 
 async def gyro_data():
@@ -14,7 +15,7 @@ async def gyro_data():
                 print("Subprocess closed stdout")
                 break
             decoded = line.decode().strip()
-            print(f"gyro output: {decoded}")
+            print(f"gyro output: {decoded}") # DEBUG
             yield decoded
     finally:
         process.kill()

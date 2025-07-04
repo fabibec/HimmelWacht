@@ -1,3 +1,4 @@
+# @author : Nicolas Koch
 import asyncio
 async def ultrasonic_data():
     process = await asyncio.create_subprocess_exec(
@@ -13,7 +14,7 @@ async def ultrasonic_data():
                 print("Subprocess closed stdout")
                 break
             decoded = line.decode().strip()
-            print(f"Ultrasonic output: {decoded}")
+            print(f"Ultrasonic output: {decoded}") # DEBUG
             yield decoded
     finally:
         process.kill()

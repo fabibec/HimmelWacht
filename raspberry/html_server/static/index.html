@@ -1,3 +1,6 @@
+// created with help of AI
+// @author: Nicolas Koch
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,11 +138,11 @@
   <div id="loading"><div class="spinner"></div></div>
   <video id="video" autoplay muted playsinline></video>
   <canvas id="overlay"></canvas>
-  
+
   <div id="status-bar">
-    <div id="video-status" class="status-item connection-inactive">Video: Connecting...</div>
-    <div id="bbox-status" class="status-item connection-inactive">Boxes: Offline</div>
-    <div id="sensor-status" class="status-item connection-inactive">Sensors: Offline</div>
+    <div id="bbox-status" class="status-item connection-inactive">Boxes: Disconnected</div>
+    <div id="sensor-status" class="status-item connection-inactive">Sensors: Disconnected</div>
+    <div id="video-status" class="status-item connection-inactive">Video: Disconnected</div>
   </div>
 </div>
 
@@ -153,7 +156,7 @@
   const ctx = canvas.getContext('2d');
   const loading = document.getElementById('loading');
   const gyroOutput = document.getElementById('gyro-output');
-  
+
   // Status elements
   const videoStatus = document.getElementById('video-status');
   const bboxStatus = document.getElementById('bbox-status');
@@ -162,7 +165,7 @@
   // Scale factors for coordinate conversion
   let scaleX = 1;
   let scaleY = 1;
-  
+
   // Store current bounding boxes and ultrasonic data
   let currentBoxes = [];
   let currentUltrasonicData = null;
@@ -171,7 +174,7 @@
     const rect = video.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
-    
+
     // Calculate scale factors for coordinate conversion
     scaleX = canvas.width / 1280;  // Original video width
     scaleY = canvas.height / 1080; // Original video height
@@ -179,7 +182,7 @@
 
   video.onplaying = () => {
     loading.style.display = 'none';
-    videoStatus.textContent = 'Video: Active';
+    videoStatus.textContent = 'Video: Connected';
     videoStatus.className = 'status-item connection-active';
     updateCanvasSize();
     drawCrosshairLoop();
@@ -303,10 +306,10 @@
 
   function drawCrosshairLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Always draw crosshair
     drawCrosshair();
-    
+
     // Draw current bounding boxes if any (only show distance when boxes are present)
     if (currentBoxes && currentBoxes.length > 0) {
       // Draw bounding boxes with proper scaling
@@ -326,7 +329,7 @@
 
         // Draw box
         ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
-        
+
         // Draw label with background
         if (box.label) {
           const textWidth = ctx.measureText(box.label).width;
@@ -342,11 +345,11 @@
           const distanceText = `${currentUltrasonicData}`;
           const distanceTextWidth = ctx.measureText(distanceText).width;
           const distanceY = scaledY + scaledHeight + 20;
-          
+
           // Background for distance text
           ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
           ctx.fillRect(scaledX, distanceY - 16, distanceTextWidth + 8, 16);
-          
+
           // Distance text
           ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
           ctx.fillText(distanceText, scaledX + 4, distanceY - 4);
@@ -354,7 +357,7 @@
         }
       });
     }
-    
+
     requestAnimationFrame(drawCrosshairLoop);
   }
 
@@ -374,11 +377,11 @@
   sensorSocket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      
+
       if (data.gyro !== undefined) {
         gyroOutput.textContent = `Geschützneigung: ${data.gyro}`;
       }
-      
+
       // Store ultrasonic data but don't display it in a separate box
       if (data.ultrasonic !== undefined) {
         currentUltrasonicData = data.ultrasonic;
