@@ -1,9 +1,12 @@
+# created with help of AI
+# @author: Nicolas Koch
+
 import asyncio
 import json
 import signal
 import logging
 from sensors_startup.gyro_startup import gyro_data
-from sensors_startup.ultrasonic_startup import ultrasonic_data  
+from sensors_startup.ultrasonic_startup import ultrasonic_data
 from aiohttp import web
 import websockets
 
@@ -13,17 +16,17 @@ logger = logging.getLogger(__name__)
 class SensorServer:
     def __init__(self):
         self.clients = set()
-        self.shutdown_event = asyncio.Event()
-        
+        self.main_tasks = []
+
     async def broadcast(self, message):
         """Broadcast message to all connected WebSocket clients"""
         if not self.clients:
             logger.debug("No clients to broadcast to")
             return
-        
+
         logger.debug(f"Broadcasting to {len(self.clients)} clients: {message}")
         disconnected_clients = set()
-        
+
         for ws in list(self.clients):
             try:
                 await ws.send(message)
@@ -33,12 +36,38 @@ class SensorServer:
             except Exception as e:
                 logger.error(f"Broadcast error: {e}")
                 disconnected_clients.add(ws)
-        
+
         # Remove disconnected clients
         self.clients -= disconnected_clients
 
+    async def _sensor_reader_task(self, sensor_name, sensor_generator):
+        """Reads from a sensor and broadcasts its data."""
+        logger.info(f"Starting reader task for {sensor_name} sensor...")
+        try:
+            async for data_str in sensor_generator:
+                try:
+                    # The subprocess outputs a string, attempt to parse it as JSON
+                    try:
+                        data = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        # If it's not JSON, use the raw string
+                        data = data_str
+
+                    message = {sensor_name: data}
+                    await self.broadcast(json.dumps(message))
+                    logger.debug(f"Broadcasted {sensor_name} data: {message}")
+                except Exception as e:
+                    logger.error(f"Error broadcasting {sensor_name} data: {e}")
+            logger.warning(f"{sensor_name} sensor generator exhausted.")
+        except asyncio.CancelledError:
+            logger.info(f"Reader task for {sensor_name} cancelled.")
+        except Exception as e:
+            logger.error(f"Error in {sensor_name} reader task: {e}")
+        finally:
+            logger.info(f"Reader task for {sensor_name} stopped.")
+
     async def sensor_aggregator(self):
-        """Aggregate sensor data and broadcast to clients"""
+        """Launches and manages independent tasks for each sensor."""
         logger.info("Starting sensor aggregator...")
 
         try:
@@ -49,59 +78,33 @@ class SensorServer:
             logger.error(f"Failed to initialize sensors: {e}")
             return
 
-        while not self.shutdown_event.is_set():
-            try:
-                # Get data from both sensors concurrently
-                results = await asyncio.gather(
-                    anext(gyro_gen),
-                    anext(ultra_gen),
-                    return_exceptions=True
-                )
-                
-                message = {}
-                
-                # Process gyro result
-                if not isinstance(results[0], Exception):
-                    message["gyro"] = results[0]
-                    logger.debug(f"Gyro data: {results[0]}")
-                else:
-                    logger.error(f"Gyro sensor error: {results[0]}")
-                
-                # Process ultrasonic result
-                if not isinstance(results[1], Exception):
-                    message["ultrasonic"] = results[1]
-                    logger.debug(f"Ultrasonic data: {results[1]}")
-                else:
-                    logger.error(f"Ultrasonic sensor error: {results[1]}")
+        # Create independent tasks for each sensor
+        gyro_task = asyncio.create_task(self._sensor_reader_task("gyro", gyro_gen))
+        ultra_task = asyncio.create_task(self._sensor_reader_task("ultrasonic", ultra_gen))
 
-                if message:
-                    await self.broadcast(json.dumps(message))
-                else:
-                    # Small delay if no data was received
-                    await asyncio.sleep(0.1)
-
-            except asyncio.CancelledError:
-                logger.info("Sensor aggregator cancelled")
-                break
-            except StopAsyncIteration:
-                logger.warning("One or both sensor generators exhausted")
-                await asyncio.sleep(1)
-            except Exception as e:
-                logger.error(f"Error in sensor aggregator: {e}")
-                await asyncio.sleep(1)
-
-        logger.info("Sensor aggregator stopped")
+        try:
+            # This will run until the sensor_aggregator task is cancelled on shutdown
+            await asyncio.gather(gyro_task, ultra_task)
+        except asyncio.CancelledError:
+            logger.info("Sensor aggregator's main task cancelled.")
+        finally:
+            logger.info("Cancelling sensor reader tasks...")
+            gyro_task.cancel()
+            ultra_task.cancel()
+            # Wait for tasks to finish their cancellation
+            await asyncio.gather(gyro_task, ultra_task, return_exceptions=True)
+            logger.info("Sensor aggregator stopped.")
 
     async def bbox_connection_handler(self):
         """Monitor bounding box connection"""
         BBOX_URI = "ws://172.16.3.105:8001"
         logger.info(f"Attempting connection to {BBOX_URI} (connection monitor only)...")
 
-        while not self.shutdown_event.is_set():
+        while True:
             try:
                 async with websockets.connect(BBOX_URI) as ws:
                     logger.info("Connected to bounding box source.")
-                    while not self.shutdown_event.is_set():
+                    while True:
                         try:
                             msg = await asyncio.wait_for(ws.recv(), timeout=5)
                             logger.debug(f"Received bbox message (length: {len(msg)})")
@@ -113,8 +116,7 @@ class SensorServer:
                 break
             except Exception as e:
                 logger.warning(f"Connection to bounding box source failed: {e}")
-                if not self.shutdown_event.is_set():
-                    await asyncio.sleep(3)
+                await asyncio.sleep(3)
 
         logger.info("Bounding box connection handler stopped.")
 
@@ -123,15 +125,15 @@ class SensorServer:
         self.clients.add(websocket)
         client_address = websocket.remote_address
         logger.info(f"Client connected: {client_address}, total clients: {len(self.clients)}")
-        
+
         try:
             # Send a welcome message to test the connection
             await websocket.send(json.dumps({"status": "connected", "message": "Sensor data stream ready"}))
-            
+
             async for message in websocket:
                 # Handle any incoming messages from clients if needed
                 logger.debug(f"Received message from client: {message}")
-                
+
         except websockets.exceptions.ConnectionClosed:
             logger.info(f"Client disconnected: {client_address}")
         except Exception as e:
@@ -160,9 +162,10 @@ class SensorServer:
         return ws_server
 
     def signal_handler(self):
-        """Handle shutdown signals"""
-        logger.info("Received shutdown signal")
-        self.shutdown_event.set()
+        """Handle shutdown signals by cancelling main tasks."""
+        logger.info("Received shutdown signal, cancelling main tasks...")
+        for task in self.main_tasks:
+            task.cancel()
 
     async def run(self):
         """Main run method"""
@@ -170,38 +173,47 @@ class SensorServer:
         for sig in [signal.SIGINT, signal.SIGTERM]:
             loop.add_signal_handler(sig, self.signal_handler)
 
+        http_runner = None
+        ws_server = None
         try:
             http_runner = await self.start_http_server()
             ws_server = await self.start_websocket_server()
 
             sensor_task = asyncio.create_task(self.sensor_aggregator())
             bbox_task = asyncio.create_task(self.bbox_connection_handler())
+            self.main_tasks = [sensor_task, bbox_task]
 
             logger.info("All services started. Press Ctrl+C to stop.")
-            await self.shutdown_event.wait()
-            logger.info("Shutting down...")
+            await asyncio.gather(*self.main_tasks)
 
-            sensor_task.cancel()
-            bbox_task.cancel()
+        except asyncio.CancelledError:
+            logger.info("Main run task was cancelled.")
+        except Exception as e:
+            logger.error(f"Unhandled error in main run loop: {e}", exc_info=True)
+        finally:
+            logger.info("Shutting down all services...")
 
-            ws_server.close()
-            await ws_server.wait_closed()
-            await http_runner.cleanup()
+            # The signal handler has already cancelled the tasks.
+            # Now, we clean up the servers.
+            if ws_server:
+                ws_server.close()
+                await ws_server.wait_closed()
+                logger.info("WebSocket server stopped.")
 
-            try:
-                await sensor_task
-                await bbox_task
-            except asyncio.CancelledError:
-                pass
+            if http_runner:
+                await http_runner.cleanup()
+                logger.info("HTTP server stopped.")
+
+            # Wait for the main tasks to complete their cancellation.
+            if self.main_tasks:
+                await asyncio.gather(*self.main_tasks, return_exceptions=True)
 
             logger.info("Shutdown complete.")
-        except Exception as e:
-            logger.error(f"Main error: {e}")
-            raise
 
 async def main():
     server = SensorServer()
     await server.run()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
