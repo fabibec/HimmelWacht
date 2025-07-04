@@ -35,6 +35,25 @@
 \usepackage{subcaption}
 \usepackage{xcolor}
 \usepackage{siunitx}
+\usepackage{listings}
+
+\lstdefinelanguage{json}{
+    morestring=[b]",
+    morecomment=[l]{//},
+    morekeywords={true, false, null},
+    sensitive=false,
+}
+
+\lstset{
+    language=json,
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    stringstyle=\color{orange},
+    commentstyle=\color{gray},
+    showstringspaces=false,
+    breaklines=true
+}
 
 % Margins
 \geometry{
@@ -86,8 +105,8 @@
 \input{src/specht/cad.tex}
 \input{src/becker/cad.tex}
 
-\input{src/specht/esp32.tex}
 \input{src/becker/esp32.tex}
+\input{src/specht/esp32.tex}
 
 \input{src/becker/raspberry.tex}
 \input{src/koch/raspberry.tex}
