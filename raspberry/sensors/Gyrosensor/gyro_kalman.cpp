@@ -15,7 +15,6 @@
 #include <cmath>
 #include <sys/time.h>
 #include "kalman.h"
-#include "../i2c_bus.h" // Include the header file for I2C bus operations
 
 #define MPU6050_ADDR 0x68 // I2C address of the MPU6050
 #define MPU6050_REG_PWR_MGMT_1 0x6B
