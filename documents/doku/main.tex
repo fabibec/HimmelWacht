@@ -16,7 +16,15 @@
 \usepackage{chngcntr} % For changing counter settings
 \usepackage{fancyhdr} % For custom headers and footers
 \usepackage[style=ieee,backend=biber,url=true,citestyle=numeric-comp]{biblatex}
-\addbibresource{references.bib} 
+\addbibresource{references.bib}
+% Remove empty parenthesis if no date specified 
+\DeclareFieldFormat{parens}{%
+  \iffieldundef{year}{}{\mkbibparens{#1}}%
+}
+\DeclareFieldFormat{date}{%
+  \iffieldundef{year}{n.d.}{#1}%
+}
+
 \usepackage{float}
 \usepackage{titling}
 \usepackage{svg}

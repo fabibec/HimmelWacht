@@ -9,7 +9,7 @@
 #include "ds4-common.h"
 
 /* Prototype */
-static void check_battery(uni_hid_device_t* d);
+static void check_battery(uint8_t battery_state);
 
 /*
     Called just once, just after boot time, and before Bluetooth gets initialized.
@@ -102,7 +102,6 @@ static uni_error_t on_device_ready(uni_hid_device_t* d) {
     }
 
     xEventGroupSetBitsFromISR(ds4_event_group, DS4_CONNECTED, NULL);
-    check_battery(d);
     return UNI_ERROR_SUCCESS;
 }
 
@@ -118,6 +117,7 @@ static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
     static ds4_input_t current_input = {0};
     static int64_t last_input_time = 0;
     static uni_gamepad_t* gp;
+    static uint8_t battery_level = 0xFF;
 
     // Limit the input processing rate to avoid flooding the event queue
     int64_t now = esp_timer_get_time();
@@ -156,7 +156,10 @@ static void on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl){
             // Add input to event queue
             xQueueOverwriteFromISR(ds4_input_queue, &current_input, NULL);
 
-            check_battery(d);
+            // Update Battery
+            battery_level = d->controller.battery;
+            //ESP_LOGI("DS4 Driver", "Battery %d", battery_level);
+            check_battery(battery_level);
             break;
         default:
             break;
@@ -191,20 +194,19 @@ static void on_oob_event(uni_platform_oob_event_t event, void* data) {
 }
 
 /*
-    Checks the battery leel of the Dualshock4 Controller and sets an event, if the level is below a defined threshold.
+    Checks the battery level of the Dualshock4 Controller and sets an event, if the level is below a defined threshold.
 
-    @param d: device to check
+    @param battery_state: absolute battery_level from gamepad (0 - 254, 255)
 
     @author Fabian Becker
 */
-static void check_battery(uni_hid_device_t* d) {
-    static uint8_t battery_level = 0xFF;
-    battery_level = d->controller.battery;
+static void IRAM_ATTR check_battery(uint8_t battery_state) {
+    EventBits_t bits = xEventGroupGetBitsFromISR(ds4_event_group);
 
     // Read battery level, set event when battery level low
-    if (battery_level < low_battery_threshold && !(battery_level & DS4_BATTERY_LOW)){
+    if (battery_state < low_battery_threshold && !(bits & DS4_BATTERY_LOW)){
         xEventGroupSetBitsFromISR(ds4_event_group, DS4_BATTERY_LOW, NULL);
-    } else if (battery_level >= low_battery_threshold && (battery_level & DS4_BATTERY_LOW)) {
+    } else if (battery_state >= low_battery_threshold && (bits & DS4_BATTERY_LOW)) {
         xEventGroupClearBitsFromISR(ds4_event_group, DS4_BATTERY_LOW);
     }
 }

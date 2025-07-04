@@ -1,6 +1,5 @@
 #include "sdkconfig.h"
 
-// wifi_tutorial.c
 #include <stdio.h>
 
 #include "esp_log.h"
