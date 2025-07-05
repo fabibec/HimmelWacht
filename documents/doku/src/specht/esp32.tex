@@ -134,11 +134,14 @@ Die Nachrichten werden über den Topic \textit{vehicle/control} gesendet. Da im 
 
 Erste Tests der MQTT-Komponente konnten ohne Fahrzeug durchgeführt werden. Dazu wurde \textit{mosquitto} als MQTT-Broker auf dem Rechner installiert. Mit Hilfe des Tools \textit{mosquitto\_pub} können Nachrichten an den Topic gesendet werden. Mittels der bereits unter Abschnitt~\ref{sec:diff_drive_tests} beschriebenen Logging-Funktionalität des ESP-IDF konnte die korrekte Verarbeitung der Nachrichten mit Hilfe von Konsolenausgaben überprüft werden. Die Nachrichten wurden dabei korrekt empfangen.
 
-\section{Integration/Fahrzeugsteuerung (Becker, Specht)}
+\section{Integration/Fahrzeugsteuerung (Becker, Specht) \label{sec:esp32_integration}}
 
 Die Fahrzeugsteuerung ist eine Abstraktionsebene, die als zentrale Anlaufstelle für Befehle vom Controller dient. Darin ist der Haupttask implementiert, der die Steuerbefehle entgegennimmt und an die entsprechenden Queues weiterleitet. Diese Queues werden dann von den Tasks der jeweiligen Komponenten abgearbeitet. Neben der Geschütz- und der Feuersteuerung ist auch die Ansteuerung der Differentialantrieb Logik eine der zentralen Komponenten. Darüber hinaus ist die Fahrzeugsteuerung auch das Modul, das letztendlich in der Main-Methode mithilfe diverser komponenten-spezifischer Strukturen initialisiert wird. \newline
 
-\subsection{Dualshock4 Treiber (Becker)}
+\subsection{Regelschleife (Becker)}
+
+Die Basis der Fahrzeugsteuerung besteht aus einer simplen Regelschleife, die wird syschron zur Update-Rate des Dualshock4 Treibers mit 60 Hz ausgeführt. Zu Beginn wartet diese Schleife bis eine Verbindung zum Controller hergestellt wurde.
+
 
 \subsection{Plattformsteuerung (Becker)}
 

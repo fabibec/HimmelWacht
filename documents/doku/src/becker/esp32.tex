@@ -76,22 +76,70 @@ Aus diesem Grund wurde entschieden, die Entwicklung eines eigenen Treibers nicht
 
 \subsection{Version 2: Treiber basierend auf der Bluepad32 Bibliothek}
 
-\subsection{Testing}
+Als Alternative wurde die Bibliothek Bluepad32 evaluiert. Diese ermöglicht das Auslesen von Gamepad-Daten auf verschiedenen Mikrocontrollern, darunter auch dem ESP32.
 
-Um den funktionierenden Treiber zu testen wurden zwei Tasks auf dem ESP-32 erstellt:
+Ein wesentlicher Vorteil dieser Bibliothek liegt darin, dass bereits eine Vielzahl von Controllern unterstützt wird. 
+Darüber hinaus erlaubt sie auch die Steuerung von Zusatzfunktionen wie der Vibrationsmotoren und der LED-Farbleiste des Gamepads. 
+Im Gegensatz zum im ESP-IDF integrierten Bluedroid Bluetooth-Stack verwendet Bluepad32 den sogenannten BTStack.
+Dieser wurde ursprünglich für 8- und 16-Bit-Mikrocontroller entwickelt und ist dadurch deutlich ressourcenschonender. \cite{BTStack}
+
+Ein entscheidender Nachteil ist jedoch die vergleichsweise geringe Dokumentation zur Integration in das IoT Development Framework (ESP-IDF). 
+Im Gegensatz zum Arduino-Framework ist die Unterstützung hier deutlich schwächer ausgeprägt. 
+Daher wurde Bluepad32 im vorherigen Schritt zunächst verworfen. 
+Die Möglichkeit, im Code-Editor direkt zu den verwendeten Funktionsdefinitionen springen zu können, erwies sich in diesem Fall als sehr hilfreich. \cite{bluepad32}
+
+Letztlich konnte ein funktionsfähiger Treiber implementiert werden, der neben dem Auslesen der Controllereingaben auch die Steuerung der Vibration und Farbwechsel unterstützt.
+Der grobe Aufbau des Treibers ist in Abbildung~\ref{fig:ds4_driver} dargestellt:
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/becker_esp32_ds4_driver.png}
+    \caption{Aufbau des Dualshock4 Treibers}
+    \label{fig:ds4_driver}
+\end{figure}
 
 \begin{itemize}
-    \item \textbf{Input-Test Task}: Dieser Task wartet vor jedem Schleifendurchlauf auf verbinden, das bedeutet er ist so lange blockiert, bis der Dualshock-Controller die Verbindung hergestellt hat.
-    Dann wartet er an der Input Queue bis der Controller einen Zustandsreport schickt. Dieser wir dann aus der Queue entnommen und auf der Konsole ausgegeben. Zuletzt wird $16.\overline{6}$ ms (60 Hz) gewartet.
-    \item \textbf{Output-Test Task}: Hier wird ebenfalls blockiert bis das Gamepad verbunden ist. Nach dem die Verbindung aufgebaut ist wird je ein Vibrations- und Farbwechselevent in die Queue gelegt. 
-    Da dass Vibrationsevent eine Dauer von 100 ms bekommen hat wird hier 100 ms gewartet.
+    \item Der \textbf{bluepad32\_task} führt sowohl den BTStack als auch die Bluepad32-Bibliothek aus. 
+    Über die dort eingebundene Plattform (eine Menge von Callback-Funktionen) erfolgt die Kommunikation mit dem Gamepad. 
+    Beispielsweise wird beim Eintreffen eines Controller-Datenpakets (Callback \textit{on\_controller\_data}) die \textbf{ds4\_input\_queue} mit aktuellen Informationen zu Tasten, Sticks und Batteriestand gefüllt.
+    Dies erfolgt mit einer Frequenz von 60 Hz. 
+    Zusätzlich wird überprüft, ob der Batteriestand unter eine kritische Grenze fällt, in diesem Fall wird das Event-Bit \textit{DS4\_BATTERY\_LOW} gesetzt bzw. wieder entfernt. 
+    Die Callbacks \textit{on\_device\_ready} und \textit{on\_device\_disconnected} aktualisieren den Verbindungsstatus, welcher im Event-Bit \textit{DS4\_CONNECTED} gespeichert ist.
+     
+    \item Die \textbf{ds4\_input\_queue} ist eine von FreeRTOS bereitgestellte Queue, die thread- bzw. multiprozessorsicher ist.
+    Hier kann der aktuelle Zustand des Controllers am Treiberinterface abgegriffen werden.
+
+    \item Der Verbindungsstatus kann über die Funktionen \textbf{ds4\_is\_connected()} (nicht blockierend) sowie \textbf{ds4\_wait\_for\_connection()} (blockierend) abgefragt werden. 
+    Letztere blockiert den aufrufenden Task, bis eine Verbindung besteht. 
+    Diese Funktion wird z.B. von der Regelschleife der Fahrzeugsteuerung verwendet (vgl. Kapitel~\ref{sec:esp32_integration}) und basiert auf den FreeRTOS EventGroups.
+
+    \item Farbänderungen und Vibrationsbefehle können in Bluepad32 ausschließlich aus dem Haupttask (\textbf{bluepad32\_task}) heraus gesendet werden. 
+    Um auch außerhalb der Plattform-Callbacks Effekte steuern zu können, werden entsprechende Befehle über die Funktion \textbf{ds4\_rumble()} bzw. \textbf{ds4\_lightbar\_color()} in die \textbf{ds4\_output\_event\_queue} eingetragen.
+    Diese Vorgehensweise sorgt dafür, dass die Funktion auch gleichzeitig von beiden Prozessor-Kernen aufgerufen werden kann.
+    Die Verarbeitung der Queue erfolgt dann sequenziell durch den \textbf{ds4\_output\_event\_task}, der die Events beim \textbf{bluepad32\_task} registriert.
+
+    \item Schließlich kann ein niedriger Batteriestand durch ein rotes Blinken der Lichtleiste am Gamepad signalisiert werden. Dazu wird der \textbf{ds4\_low\_battery\_signal\_task} aktiviert, sobald das Event-Bit \textit{DS4\_BATTERY\_LOW} gesetzt ist. 
+    Währenddessen werden andere Farbbefehle verworfen.
 \end{itemize}
 
-Mit diesem simplen Testsetup konnten alle Funktionen des Controller getestet werden. 
-Auch das Fortfahren nach einem Verbindungsabbruch konnten durch Aus- und Einschalten des Gamepads getestet werden. 
+\subsection{Testing}
 
-Bei Testen fiel weiterhin auf, dass die Batteriestandswarnung dauerhaft ausgelöst war, ein Blick auf die Input Werte zeigte, dass der Controller eine komplette leere Batterie anzeigte. 
-Auch nach dem Aufladen fielen die Werte schnell wieder auf 0, obwohl am PC ganz andere Ladestände angezeigt wurden. (WIP!)
+Zum Testen des implementierten Treibers wurden zwei separate Tasks auf dem ESP32 erstellt:
+
+\begin{itemize}
+    \item \textbf{Input-Test Task}: Dieser Task wartet zu Beginn jeder Schleife blockierend auf eine bestehende Verbindung mit dem DualShock-Controller. 
+    Sobald die Verbindung hergestellt ist, blockiert der Task an der Input-Queue, bis ein Zustandsreport vom Controller eintrifft. Der empfangene Report wird aus der Queue entnommen und auf der Konsole ausgegeben. 
+    Anschließend erfolgt eine Wartezeit von $16.\overline{6}$\,ms, entsprechend einer Frequenz von 60 Hz.
+    
+    \item \textbf{Output-Test Task}: Auch dieser Task wartet zunächst auf eine erfolgreiche Verbindung mit dem Gamepad. 
+    Nach dem Verbindungsaufbau wird jeweils ein Vibrations- und ein Farbwechselevent in die Output-Queue eingetragen. 
+    Da dem Vibrationsbefehl eine Dauer von 100 ms zugewiesen wurde, pausiert der Task entsprechend lange.
+\end{itemize}
+
+Mit diesem einfachen Testaufbau konnten alle Kernfunktionen des Treibers erfolgreich validiert werden. 
+Auch das Wiederherstellen der Funktionalität nach einem Verbindungsabbruch konnte durch Aus- und Einschalten des Gamepads demonstriert werden.
+
+Das visuelle Feedback bei niedrigem Batteriestand wurde simuliert, indem der Schwellenwert zur Auslösung des zugehörigen Events künstlich angehoben wurde.
 
 \section{Plattformsteuerung (Becker)}
 
