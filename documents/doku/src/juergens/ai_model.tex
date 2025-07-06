@@ -165,7 +165,7 @@ Der zweite Kommunikationspartner ist der Empfänger des Kamera-Streams. In diese
 Bei der Erstellung der Pipelines wird H264 als Video-Codec und UDP als Transportprotokoll gewählt. Mit dieser Kombination soll eine hohe Performance und eine geringe Latenz erreicht werden.\\
 Diese Pipeline überträgt den Kamera-Stream an OpenCV mit einer Latenz von etwa 1 Sekunde. Diese Latenz ist für diese Anwendung inakzeptabel, da die Inferenz des Modells aber auch der Kamerastream so nahe wie möglich an der Echtzeit sein soll. 
 
-\subsection{Inferenz des Modells auf dem Raspberry Pi 5 (Jürgens)}
+\subsection{Inferenz des Modells auf dem Raspberry Pi 5 (Jürgens) \label{sec:inference_raspberry}}
 Die Inferenz des Modells erfolgt entsprechend der Dokumentation von Ultralytics. Diese wird in einer Endlosschleife durchgeführt und verarbeitet den Kamera-Stream Bild für Bild. Trotz der relativ guten Hardware des Raspberry Pi 5 (im Vergleich zu älteren Raspberry Pi Systemen) ist die Inferenzzeit und damit Nutzbarkeit dieses Ansatz sehr eingeschränkt. So konnte sehr markantes Ruckeln bei der Anzeige des Kamera-Streams festgestellt werden. Die Ausführung wirkt sich dabei besonders auf die CPU-Last aus. Wie in \ref{fig:CPU und RAM-Auslastung Inferenz RPI5} dargestellt wurde die CPU vom Raspberry Pi 5 teilweise über 90\% ausgelastet. Dieses Verhalten spiegelt sich bei der Performance der KI-Auswertung wieder. So hatte das System trotz der Nutzung des kleinstmöglichen Modells einen sehr geringen Durchsatz (siehe \ref{fig:Zeitanalyse der Inferenz (RPI5)}, grüne Linie). Die Berechnung durch das KI-Modell wurde nach Abstimmung mit Herrn Altmann und dem Team auf einen Laborrechner mit dedizierter Grafikkarte ausgelagert.
 
 \begin{figure}[h]

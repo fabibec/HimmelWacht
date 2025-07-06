@@ -1,4 +1,4 @@
-\chapter{Einrichtung einer Ultra-Low-Latency Videoübertragung (Jürgens)}
+\chapter{Einrichtung einer Ultra-Low-Latency Videoübertragung \label{sec:webrtc}}
 \section{Anforderungen an die Videoübertragung (Jürgens)}
 Die angebundene Kamera des RPi5 soll zukünftig neben dem Stream für die KI-Auswertung auch das 'Auge' des Roboters darstellen. So soll die Sicht des Roboters in nahezu Echtzeit abrufbar sein. Daher muss neben einer robusten Verbindung besonders auch die Latenz der Videoübertragung so gering wie möglich gehalten werden. Die bisherige Implementation mittels einer libcamera-Pipeline als Sender und einer GStreamer-Pipeline als Empfänger ist mit einer Latenz von etwa 1 Sekunde nicht für die Echtzeitübertragung geeignet. Nach einer Recherche zu verschiedenen Streaming-Protokollen und -Techniken wurde die Entscheidung getroffen, dass zukünftig eine Lösung mittels WebRTC verwendet werden soll. WebRTC bietet eine Lösung mit einer Latenz von unter 500 ms an, welches für dieses Projekt mehr als ausreichend ist \cite{WebRTCLatency}.
 
