@@ -140,10 +140,78 @@ Die Fahrzeugsteuerung ist eine Abstraktionsebene, die als zentrale Anlaufstelle 
 
 \subsection{Regelschleife (Becker)}
 
-Die Basis der Fahrzeugsteuerung besteht aus einer simplen Regelschleife, die wird syschron zur Update-Rate des Dualshock4 Treibers mit 60 Hz ausgeführt. Zu Beginn wartet diese Schleife bis eine Verbindung zum Controller hergestellt wurde.
+Die Grundlage der Fahrzeugsteuerung bildet eine Regelschleife, welche synchron zur Update-Frequenz des DualShock4-Treibers mit 60 Hz ausgeführt wird. 
+Zunächst wird in dieser Schleife gewartet, bis eine Verbindung zum Controller hergestellt wurde.
+Im Anschluss daran wird der aktuelle Status des Controllers aus der entsprechenden Queue abgerufen (vgl. Abbildung \ref{fig:ds4_driver}).
 
+Abhängig vom aktuellen Modus, also dem Zustand, in dem sich das Fahrzeug befindet, werden mit diesen Daten verschiedene Berechnungen durchgeführt. 
+Das Fahrzeug verfügt über zwei Modi:
 
-\subsection{Plattformsteuerung (Becker)}
+\begin{itemize}
+    \item Im \textbf{manuellen Modus} erfolgt die Steuerung des Fahrzeugs, der Plattform sowie die Schussabgabe manuell über den DualShock4-Controller.
+    \item Im \textbf{semi-automatischer Modus} wird die Steuerung der Plattform durch ein KI-Modell übernommen.
+\end{itemize}
+
+Der aktuelle Modus ist anhand der Lichtleiste des Controllers erkennbar:
+Im manuellen Modus leuchtet die Lichtleiste in einem hellen Grün, während sie im semi-automatischen Modus in einem orangen Farbton leuchtet.
+Der Modus kann durch gleichzeitiges Halten der oberen Pfeiltaste und der Kreuztaste für 1.5 Sekunden gewechselt werden, beim Moduswechsel vibriert der Controller für einen kurzen Moment.
+
+\subsection{Plattformsteuerung \& Schussabgabe (Becker)} \label{sec:platform_integration}
+
+Die Plattform wird im manuellen Modus anhand der Eingabe des Joysticks gesteuert, wobei zuerst die digitalisierten Werte des analogen Controller-Sticks in Winkel umgerechnet werden müssen.
+Dafür werden folgende Schritte ausgeführt:
+
+\begin{enumerate}
+    \item \textbf{Deadzone-Filter} \newline
+    Um kleine Bewegungen des Joysticks, die durch Stick-Drift entstehen, zu ignorieren, wird ein Deadzone-Filter angewendet.
+    Wenn der Wert des Controller-Sticks kleiner als ein bestimmter Schwellenwert ist, wird der Wert auf null gesetzt, um ungewollte Eingaben zu vermeiden.
+    \[
+    \text{if} \left( |\text{stick}| < \text{deadzone} \right) \text{ then stick} = 0
+    \]
+
+    \item \textbf{Normalisierung} \newline
+    Die vorliegenden Digitalwerte des Sticks werden nun vom Intervall ]-512, 512[ auf das Interval von ]-1, 1[ normalisiert.
+    \[
+    \text{normalized\_stick} = \frac{\text{stick}}{512}
+    \]
+
+    \item \textbf{Low-Pass-Filter zur Glättung der Eingabe} \newline
+    Ein Low-Pass-Filter wird verwendet, um schnelle Schwankungen zu glätten und sanfte Bewegungen zu erzeugen. 
+    Dieser wurde hinzugefügt, da es bei schneller Drehung durch heftiges Bewegen des Sticks häufig zu zitterigen Drehbewegungen kam.
+    Der Filter berechnet einen geglätteten Wert basierend auf der aktuellen Eingabe sowie dem vorherigen Wert, wodurch schnelle Änderungen abgeflacht werden.
+    \[
+    \text{filtered\_stick} = \alpha \cdot \text{normalized\_stick} + (1 - \alpha) \cdot \text{filtered\_stick\_previous}
+    \]
+
+    Da \( \alpha = 0.2 \) beträgt, fließt die aktuelle Eingabe lediglich zu 20 Prozent in die Berechnung ein, während der vorherige Wert zu 80 Prozent berücksichtigt wird. 
+    Dieser Wert wurde manuell gewählt, da hier zitterige Drehungen am besten verhindert werden.
+
+    \item \textbf{Berechnung der Geschwindigkeit} \newline
+    Die Geschwindigkeit der Plattform wird durch die gefilterte Eingabe sowie den maximalen Drehwinkel pro Sekunde berechnet. 
+    So wird sichergestellt, dass die Plattform lediglich mit einer Geschwindigkeit rotiert, die von den Servos verarbeitet werden kann. 
+    Der Wert wurde anhand des Datenblatts \cite{esp_platform_servo} festgelegt und anschließend an beiden Plattformachsen reduziert, um eine übermäßige Empfindlichkeit gegenüber Controller-Eingaben zu vermeiden.
+    \[
+    \text{speed} = \text{filtered\_stick} \cdot \text{max\_deg\_per\_sec}
+    \]
+
+    \item \textbf{Berechnung des neuen Winkels} \newline
+    Schließlich wird der Winkel der Plattform auf Basis der berechneten Geschwindigkeit und der Zeitdifferenz ($dt$, der Abstand zwischen den Regelzyklen) angepasst. 
+    \[
+    \text{platform\_angle} = \text{platform\_angle} \pm (\text{speed} \cdot \text{dt})
+    \]
+    Ob Addition oder Subtraktionverwendet wird, basiert hierbei auf der Verbaurichtung des Servomotors.
+\end{enumerate}
+
+Durch diese Berechnungen lässt sich die Plattform nun über die vertikale Achse des rechten Sticks des DualShock4-Controllers drehen und über die horizontale Achse neigen. 
+Bedauerlicherweise führen die Vibrationen des Geschützaufbaus, insbesondere bei längerer und schnellerer Drehung, weiterhin zu ruckartigen Bewegungen der Motoren. 
+Es konnte beobachtet werden, dass sich das Verhalten durch den Einsatz eines Low-Pass-Filters marginal verbessert hat. Aufgrund von Zeitmangel konnten keine weiteren Lösungsansätze mehr in Betracht gezogen werden. 
+Ein möglicher Ansatz wäre beispielsweise der Wechsel der Servomotoren zu digitalen Motoren, die ein genaueres Feedback liefern, oder der Einbau einer PID-Regelung.
+
+Zusätzlich wird, sobald der Nutzer die Enden der Drehwinkel erreicht hat, haptisches Feedback in Form von Vibration des Controllers an den Nutzer weitergegeben. 
+Durch das Halten der Kreistaste ist es im manuellen Modus ebenfalls möglich, sich zurück auf die Nullposition beider Achsen zu bewegen.
+
+Die Schussabgabe erfolgt über den rechten unteren Trigger des Controllers, analog zur Steuerung in bekannten Shootern. 
+Da der Treiber die Position des Triggers als 10-Bit-Wert liefert, wurde ein Threshold-Wert von 800 gewählt, um wirklich nur gewollten Druck zu registrieren und nicht versehentlich Schüsse abzufeuern.
 
 \subsection{Differentialantrieb (Specht)} \label{sec:diff_drive_integration}
 
