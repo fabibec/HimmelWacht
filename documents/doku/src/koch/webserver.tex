@@ -1,11 +1,11 @@
-\chapter{Webserver (Koch)}
+\chapter{Webserver}
 \label{sec:Webserver}
-\section{Funktion und Anforderung des Webservers}
+\section{Funktion und Anforderung des Webservers (Koch)}
 Der Webserver des Projekts sollte die zentrale Schnittstelle zwischen verschiedenen Sensoren werden und sowohl Videomaterial mit bereits verarbeiteten KI-Informationen darstellen können und wissenswerte Daten wie die Entfernung des Fliegers oder die Geschützneigung anzeigen.
 Als zentrales Problem stand dabei das Videomaterial mit entsprechenden Bounding Boxes anzuzeigen im Vordergrund, da bereits über das ganze Projekt hinweg die KI die leistungsintensivste Aufgabe war und entsprechende Latenzprobleme bereits auf das Minimum verringert wurden.
-Der Grundlegende Aufbau der KI-Verarbeitung mitsamt der Videoausgabe ist in \ref{JENDRIK} erklärt.
+Der Grundlegende Aufbau der KI-Verarbeitung mitsamt der Videoausgabe ist in Kapitel \ref{JENDIRK} erklärt.
 
-\section{Lösungsansatz und Umsetzung}
+\section{Lösungsansatz und Umsetzung (Koch)}
 Ein Lösungsansatz diesbezüglich war deshalb, dass die Sensordaten vom Raspberry Pi per MQTT an den PC geschickt werden, welcher die KI-Verarbeitung übernimmt, um die Daten direkt im Videostream abzubilden.
 Das Video mit den Bounding Boxes und den Sensordaten sollte dann zurück auf den MediaMTX-Server geschickt werden, worüber man dann das Video sehen kann.
 Dieser Ansatz war allerdings keine geeignete Lösung, da die Verarbeitung zu lange dauerte und somit eine zu geringe Framerate erreicht wurde, wodurch dies keine annehmbare Lösung darstellte.

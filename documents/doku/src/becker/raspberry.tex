@@ -1,3 +1,56 @@
 \chapter{Raspberry Pi Programmierung}
 
+\section{Einführung (Becker)}
+
+Der verbaute Raspberry Pi 5 mit 8 GB RAM war ursprünglich dafür vorgesehen, das KI-Modell zur Verfolgung des Holzfliegers lokal auszuführen.
+Um eine Drosselung der CPU-Taktfrequenz infolge von Überhitzung (Thermal Throttling) zu vermeiden, wurde ein aktiver Luftkühler installiert.
+
+Im weiteren Projektverlauf zeigte sich jedoch, dass die Rechenleistung des Raspberry Pi nicht ausreichte, um das KI-Modell mit der erforderlichen Verarbeitungsgeschwindigkeit auszuführen (siehe Kapitel \ref{sec:inference_raspberry}).
+Aus diesem Grund wirkt die derzeit auf dem Mikrocontroller implementierte Funktionalität im Vergleich zur ursprünglich geplanten Systemarchitektur für diese Hardware unterdimensioniert.
+
 \section{Lautsprecher (Becker)}
+
+Ziel war es, mittels Lautsprechern akustisches Feedback bei bestimmten Ereignissen wie dem Systemstart, der Schussabgabe sowie dem erfolgreichen Erkennen des Holzfliegers zu geben, um den Gamification-Aspekt des Projekts zu stärken. 
+Hierzu wurden 3-Watt-Miniaturlautsprecher verwendet, die über MAX98357A-Verstärkerboards angesteuert werden sollten.
+
+Zunächst wurde die grundlegende Funktionalität mit einem einzelnen Lautsprecher getestet. Gemäß eines online verfügbaren Leitfadens zur Ansteuerung über den Raspberry Pi \cite{raspberry_i2s} wurde das I²S-Protokoll (Inter-IC Sound) aktiviert. 
+I²S ist ein digitales Audioprotokoll, welches ähnlich wie I²C ursprünglich von Philips entwickelt wurde und der seriellen Übertragung von Audiodaten dient.
+Nach erfolgreicher Verdrahtung von Mikrocontroller, Verstärkerboard und Lautsprecher auf einem Breadboard sowie der Auswahl des richtigen Audioausgangs am Raspberry Pi konnte die Tonausgabe erfolgreich realisiert werden. 
+Alle drei bestellten Verstärkerboards sowie zwei bereits vorhandene Lautsprecher wurden auf ihre Funktionsfähigkeit geprüft. 
+Dabei fiel auf, dass eines der Verstärkerboards keinen Ton ausgab und sich ungewöhnlich stark erhitzte, es wurde daraufhin aus dem weiteren Projekt ausgeschlossen.
+
+In einem weiteren Schritt wurde basierend auf demselben Leitfaden die Stereo-Konfiguration getestet. 
+Das MAX98357A-Verstärkerboard verfügt hierfür über einen sogenannten Shutdown-Pin ($SD$), über diesen lässt sich der gewünschte Audiokanal auswählen, indem eine entsprechende Spannung an den Pin gelegt wird.
+Standardmäßig ergibt sich durch die interne Beschaltung eines 1 M\textOmega \space Widerstandes zwischen $SD$ und $V_{in}$ und eines 100 k\textOmega \space Widerstandes zwischen $SD$ und $GND$ eine gemischte Ausgabe beider Kanäle (jeweils 50\% des linken und rechten Audiokanals). 
+Möchte man stattdessen nur einen Kanal ausgeben, müssen die Widerstandswerte angepasst werden.
+
+Da in diesem Projekt nicht die im Leitfaden verwendeten originalen Adafruit-Boards, sondern günstigere Alternativen zum Einsatz kamen, wurde zunächst geprüft, ob die interne Beschaltung dieser Module identisch ist. 
+Obwohl kein offizielles Datenblatt vorlag, konnte eine schematische Darstellung in den Artikelbildern gefunden werden, die denselben Aufbau bestätigte. 
+Zusätzlich waren dort die Zielwiderstände für beide Kanäle angegeben \cite{raspberry_max98357}:
+
+\begin{itemize}
+    \item Um den linken Kanal anzusprechen, musste $SD$ direkt mit $V_{in}$ verbunden werden.
+    \item Für den rechten Kanal war laut Schaltplan erforderlich, den ursprünglichen 1 M\textOmega \space Widerstand durch einen effektiven Widerstand von 370 k\textOmega \space zu ersetzen. 
+    Da die internen Widerstände nicht entfernbar waren, wurde eine Parallelschaltung mit einem externen Widerstand nach folgender Berechnung vorgenommen:
+    \[
+    \frac{1}{370 k\Omega} = \frac{1}{1 M\Omega} + \frac{1}{R_2} \space\Rightarrow\space
+    R_2 \approx 587 k\Omega 
+    \]
+\end{itemize}
+
+Durch Kombination mehrerer Widerstände in Serie wurde ein Gesamtwiderstand von etwa 590 k\textOmega \space realisiert, welcher zwischen $SD$ und $V_{in}$ geschaltet wurde. 
+Der tatsächliche Widerstandswert wurde mit einem Multimeter validiert.
+
+Trotz korrektem Aufbau wurde in dieser Konfiguration jedoch kein Ton ausgegeben. 
+Da zu diesem Zeitpunkt der mechanische Zusammenbau der Plattform Vorrang hatte, wurde die Fehlersuche zurückgestellt.
+
+Im weiteren Projektverlauf wurde festgestellt, dass der ESP32-Chip nicht auf das Breakoutboard passte. 
+Herr Altmann stellte daraufhin ein alternatives, jedoch deutlich größeres Board zur Verfügung. 
+Aufgrund des begrenzten Platzes konnte nun nur noch ein einzelner Lautsprecher verbaut werden, welcher teilweise über den Rand der Plattform hinausragte. 
+Für diesen Fall wurde eine entsprechende Halterung entworfen (vgl. Kapitel \ref{sec:speaker_holder}).
+
+Beim erneuten Test des ursprünglich funktionierenden Mono-Setups (SD in Standardkonfiguration) wurde jedoch kein Ton mehr ausgegeben, auch nicht auf dem Breadboard. 
+Beide verbliebenen, funktionstüchtigen Verstärkerboards wurden getestet, jedoch ohne Erfolg.
+
+Da dem Projektteam der Robotor ohne Lautsprecher auf der Plattform deutlich besser gefiel und das Fehlen des Lautsprechers keine grundlegenden Funktionen einschgränkt, wurde sich darauf geeinigt, auf die Integration des Lautsprechersystems zu verzichten. 
+
