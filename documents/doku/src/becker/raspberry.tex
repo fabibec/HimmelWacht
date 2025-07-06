@@ -11,12 +11,12 @@ Aus diesem Grund wirkt die derzeit auf dem Mikrocontroller implementierte Funkti
 \section{Lautsprecher (Becker)}
 
 Ziel war es, mittels Lautsprechern akustisches Feedback bei bestimmten Ereignissen wie dem Systemstart, der Schussabgabe sowie dem erfolgreichen Erkennen des Holzfliegers zu geben, um den Gamification-Aspekt des Projekts zu stärken. 
-Hierzu wurden 3-Watt-Miniaturlautsprecher verwendet, die über MAX98357A-Verstärkerboards angesteuert werden sollten.
+Hierzu wurden 3-Watt Miniaturlautsprecher verwendet, die über MAX98357A-Verstärkerboards angesteuert werden sollten.
 
 Zunächst wurde die grundlegende Funktionalität mit einem einzelnen Lautsprecher getestet. Gemäß eines online verfügbaren Leitfadens zur Ansteuerung über den Raspberry Pi \cite{raspberry_i2s} wurde das I²S-Protokoll (Inter-IC Sound) aktiviert. 
 I²S ist ein digitales Audioprotokoll, welches ähnlich wie I²C ursprünglich von Philips entwickelt wurde und der seriellen Übertragung von Audiodaten dient.
-Nach erfolgreicher Verdrahtung von Mikrocontroller, Verstärkerboard und Lautsprecher auf einem Breadboard sowie der Auswahl des richtigen Audioausgangs am Raspberry Pi konnte die Tonausgabe erfolgreich realisiert werden. 
-Alle drei bestellten Verstärkerboards sowie zwei bereits vorhandene Lautsprecher wurden auf ihre Funktionsfähigkeit geprüft. 
+Nach erfolgreicher Verdrahtung von Mikrocontroller, Verstärkerboard und Lautsprecher auf einem Breadboard, sowie der Auswahl des richtigen Audioausgangs am Raspberry Pi konnte die Tonausgabe erfolgreich realisiert werden. 
+Alle drei bestellten Verstärkerboards und zwei bereits vorhandene Lautsprecher wurden daraufhin auf ihre Funktionsfähigkeit geprüft. 
 Dabei fiel auf, dass eines der Verstärkerboards keinen Ton ausgab und sich ungewöhnlich stark erhitzte, es wurde daraufhin aus dem weiteren Projekt ausgeschlossen.
 
 In einem weiteren Schritt wurde basierend auf demselben Leitfaden die Stereo-Konfiguration getestet. 
@@ -30,7 +30,7 @@ Zusätzlich waren dort die Zielwiderstände für beide Kanäle angegeben \cite{r
 
 \begin{itemize}
     \item Um den linken Kanal anzusprechen, musste $SD$ direkt mit $V_{in}$ verbunden werden.
-    \item Für den rechten Kanal war laut Schaltplan erforderlich, den ursprünglichen 1 M\textOmega \space Widerstand durch einen effektiven Widerstand von 370 k\textOmega \space zu ersetzen. 
+    \item Für den rechten Kanal war es laut Schaltplan erforderlich, den ursprünglichen 1 M\textOmega \space Widerstand durch einen effektiven Widerstand von 370 k\textOmega \space zu ersetzen. 
     Da die internen Widerstände nicht entfernbar waren, wurde eine Parallelschaltung mit einem externen Widerstand nach folgender Berechnung vorgenommen:
     \[
     \frac{1}{370 k\Omega} = \frac{1}{1 M\Omega} + \frac{1}{R_2} \space\Rightarrow\space
@@ -38,19 +38,19 @@ Zusätzlich waren dort die Zielwiderstände für beide Kanäle angegeben \cite{r
     \]
 \end{itemize}
 
-Durch Kombination mehrerer Widerstände in Serie wurde ein Gesamtwiderstand von etwa 590 k\textOmega \space realisiert, welcher zwischen $SD$ und $V_{in}$ geschaltet wurde. 
-Der tatsächliche Widerstandswert wurde mit einem Multimeter validiert.
+Durch Kombination mehrerer Widerstände in Serie ist ein Gesamtwiderstand von etwa 590 k\textOmega \space entstanden, welcher zwischen $SD$ und $V_{in}$ geschaltet wurde. 
+Der tatsächliche Widerstandswert ist mit einem Multimeter validiert worden.
 
 Trotz korrektem Aufbau wurde in dieser Konfiguration jedoch kein Ton ausgegeben. 
 Da zu diesem Zeitpunkt der mechanische Zusammenbau der Plattform Vorrang hatte, wurde die Fehlersuche zurückgestellt.
 
-Im weiteren Projektverlauf wurde festgestellt, dass der ESP32-Chip nicht auf das Breakoutboard passte. 
-Herr Altmann stellte daraufhin ein alternatives, jedoch deutlich größeres Board zur Verfügung. 
-Aufgrund des begrenzten Platzes konnte nun nur noch ein einzelner Lautsprecher verbaut werden, welcher teilweise über den Rand der Plattform hinausragte. 
-Für diesen Fall wurde eine entsprechende Halterung entworfen (vgl. Kapitel \ref{sec:speaker_holder}).
+Im weiteren Projektverlauf stellte sich heraus, dass der ESP32-Chip nicht zum vorhandenen Breakoutboard passte. 
+Herr Altmann stellte daraufhin ein alternatives, allerdings deutlich größeres Board zur Verfügung. 
+Aufgrund des begrenzten Bauraums ließ sich jetzt nur noch ein einzelner Lautsprecher montieren, der zudem teilweise über den Rand der Plattform hinausragte. 
+Für diesen Anwendungsfall ist eine passende Halterung entworfen worden (vgl. Kapitel \ref{sec:speaker_holder}).
 
-Beim erneuten Test des ursprünglich funktionierenden Mono-Setups (SD in Standardkonfiguration) wurde jedoch kein Ton mehr ausgegeben, auch nicht auf dem Breadboard. 
-Beide verbliebenen, funktionstüchtigen Verstärkerboards wurden getestet, jedoch ohne Erfolg.
+Beim erneuten Test des ursprünglich funktionierenden Mono-Setups (SD in Standardkonfiguration) wurde nun jedoch kein Ton mehr ausgegeben. 
+Beide verbliebenen, funktionstüchtigen Verstärkerboards sind getestet worden, jedoch ohne Erfolg.
 
-Da dem Projektteam der Robotor ohne Lautsprecher auf der Plattform deutlich besser gefiel und das Fehlen des Lautsprechers keine grundlegenden Funktionen einschgränkt, wurde sich darauf geeinigt, auf die Integration des Lautsprechersystems zu verzichten. 
+Da das Projektteam den Robotor ohne Lautsprecher auf der Plattform optisch ansprechender fand und das Fehlen des Lautsprechers keine grundlegenden Funktionen einschränkt, wurde sich darauf geeinigt, auf die Integration des Lautsprechersystems zu verzichten. 
 
