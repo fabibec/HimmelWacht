@@ -14,14 +14,14 @@ Die Winkelberechnung erfolgt nach der Formel \ref{eq:norms_to_angle}:
 
 \begin{gather}
     \begin{aligned}
-    \varphi_\text{pitch} &= \arctan2\left(a_x,\sqrt{a_y^2 + a_z^2}\right) \cdot \frac{180^\circ}{\pi} \\
-    \varphi_\text{roll}  &= \arctan2\left(a_y, a_z\right) \cdot \frac{180^\circ}{\pi}
+    \varphi_\text{pitch} &= \arctan2\left(a_y,\sqrt{a_x^2 + a_z^2}\right) \cdot \frac{180^\circ}{\pi} \\
+    \varphi_\text{roll}  &= \arctan2\left(a_x,\sqrt{a_y^2 + a_z^2}\right) \cdot \frac{180^\circ}{\pi}
     \end{aligned}
     \label{eq:norms_to_angle}
 \end{gather}
 
 
-Hierbei sind $a_x$, $a_y$ und $a_z$ die normierten Beschleunigungswerte in $\mathit{g}$-Einheiten (berechnet aus den Rohwerten durch Division durch $16384$). 
+Hierbei sind $a_x$, $a_y$ und $a_z$ die normierten Beschleunigungswerte in $\mathit{g}$ (berechnet aus den Rohwerten durch Division durch $16384$). 
 
 Die $atan2$-Funktion liefert den Winkel zwischen der positiven $x$-Achse und dem Punkt $(x, y)$ in der Ebene, wodurch Sprünge oder Mehrdeutigkeiten bei $90^\circ$ vermieden werden. \cite{raspberry_matlab_atan2}
 
@@ -35,28 +35,60 @@ Aufgrund der aufgewendeten Zeit für die Implementierung des Kalman-Filters soll
 Wie Eingangs erwähnt, sollte der Gyrosensor MPU6050 genutzt werden, um die Position der Geschützplattform zu bestimmen, wofür der Winkel der Drehung um die eigene Achse benötigt wird. Dabei stellte sich heraus das der MPU6050 für diesen Wert zu einem starken Drift neigt, weshalb empfohlen wird diesen mit einem Magnetometer zu kombinieren \cite[S. 26]{raspberry_invensense_mpu6050_datasheet}.
 Zur gleichen Zeit stellte sich heraus, dass diese Funktionalität nicht benötigt wird, da über die Servo-Motoren bereits ein Nullpunkt definiert werden konnte, weshalb der Gyrosensor letztlich nur noch für die Neigung der Geschützplattform genutzt wird, um diese als Debug-Information auf dem Webserver \ref{sec:Webserver} anzuzeigen.
 
+\subsection{Kalman Filter Implementierung (Koch)}
+\label{sec:kalman_filter}
+Der Kalman-Filter ist ein Algorithmus zur Schätzung des Zustands eines dynamischen Systems. Er nutzt Messwerte mit einem mathematischen Modell, um aus verrauschten Daten optimale Schätzungen zu erzeugen und zu filtern, was insbesondere bei Sensoren mit Rauschen, wie dem MPU6050, von Bedeutung ist \cite{raspberry_rwth_kalman_2025}.
+Die Berechnung des Kalman-Filters erfolgt nun mittels der Werte des Gyroskops, einer Zeitdifferenz und der zuvor berechneten Roll-und Pitchwinkel. Die Neigungswinkel liefern eine absolute Orientierung relativ zur Erdgravitation, sind jedoch anfällig gegenüber Rauschen und dynamischen Bewegungen, da sie auf Momentanwerten basieren, weshalb man hier auf die Gyroskopwerte zurückgreift.
+Diese liefern die Winkelgeschwindigkeit, also die Änderungsrate der Orientierung. Diese Werte werden über die Zeit integriert, um eine relative Winkelschätzung zu erhalten. Sie zeichnen sich durch hohe Kurzzeitstabilität und geringe Reaktionsverzögerung aus, unterliegen jedoch einem Driftverhalten aufgrund von Messabweichungen und systematischen Fehlern.
+Der Kalmanfilter fusioniert nun diese beiden Quellen und dessen Vorteile in Relation zum letzten bekannten Zustand.
+
+Dabei besteht der Kalman-Filter aus zwei Hauptphasen: dem Vorhersageschritt (Prediction) und dem Aktualisierungsschritt (Update). Im Vorhersageschritt wird der neue Winkel $\hat{\theta}_{\text{new}}$ basierend auf dem vorherigen Winkel $\hat{\theta}_{\text{prev}}$ und der aktuellen korrigierten Gyroskoprate $\omega$ geschätzt:
+
+\begin{equation*}
+\omega = \text{newGyroRate} - \text{bias}, \quad \hat{\theta}_{\text{new}} = \hat{\theta}_{\text{prev}} + dt \cdot \omega
+\end{equation*}
+
+Zusätzlich wird die Unsicherheit dieser Vorhersage, dargestellt durch die Kovarianzmatrix $P$, angepasst. Dabei werden sowohl das Zeitintervall $dt$ als auch Modellunsicherheiten, wie der Drift des Gyroskops, berücksichtigt.
+
+Im Aktualisierungsschritt wird der berechnete Winkel $\theta_{\text{meas}}$, welcher mithilfe der Beschleunigungswerte berechnet wurde, mit der Vorhersage verglichen. Die Differenz
+
+\begin{equation*}
+S = \theta_{\text{meas}} - \hat{\theta}_{\text{prior}}
+\end{equation*}
+
+wird als \emph{Innovation} bezeichnet und wird benötigt um den Kalman-Gain $K$ zu bestimmen. Der Kalman-Gain bestimmt, wie stark diese neue Information zur Korrektur verwendet wird. Er wird aus dem Verhältnis von Unsicherheits-Kovarianzmatrix $P$ und der Innovation $S$ berechnet:
+
+\begin{equation*}
+K_0 = \frac{P_{00}}{S}, \quad K_1 = \frac{P_{10}}{S}
+\end{equation*}
+
+Hierbei steht $P_{00}$ für die Unsicherheit in der Winkelschätzung, und $P_{10}$ beschreibt die Kovarianz zwischen Winkel und Bias des Gyroskops.
+
+Ein höherer Wert von $K$ bedeutet, dass der Filter der neuen Messung mehr vertraut und ein niedriger Wert zeigt, dass die eigene Vorhersage als zuverlässiger eingeschätzt wird.
+
+Abschließend wird die Kovarianzmatrix $P$ angepasst, um die reduzierte Unsicherheit nach der Messung zu reflektieren. Dadurch wird der Filter präziser in seiner nächsten Schätzung \cite{raspberry_tkjelectronics_kalman_filter_2012}.
+
+Insgesamt erlaubt dieser Algorithmus eine robuste und gleitende Fusion der Sensordaten, wobei kurzfristige Genauigkeit des Gyroskops und langfristige Stabilität des Beschleunigungssensors optimal kombiniert werden.
+
 \begin{samepage}
-    \subsection{Kalman Filter Implementierung (Koch)}
-    \label{sec:kalman_filter}
-    Der Kalman-Filter ist ein Algorithmus zur Schätzung des Zustands eines dynamischen Systems. Er nutzt Messwerte mit einem mathematischen Modell, um aus verrauschten Daten optimale Schätzungen zu erzeugen und zu filtern, was insbesondere bei Sensoren mit Rauschen, wie dem MPU6050, von Bedeutung ist \cite{raspberry_rwth_kalman_2025}.
-    In der Abbildung \ref{fig:pitch_roll_vergleich} ist sowohl für den Roll, als auch den Pitch ein signifikanter Unterschied zwischen den Rohdaten und den gefilterten Daten zu erkennen. Die ersten Schwankungen der gefilterten Werte sind vermutlich darauf zurückzuführen, dass der Kalmanfilter mit wenig Referenzwerten nur ungenaue Schätzungen liefern kann, weshalb die Schätzungen auch erst mit steigender Anzahl an Werten genauer werden.
+    In der Abbildung \ref{fig:pitch_pitch} und \ref{fig:roll_roll} ist sowohl für den Pitch, als auch den Roll ein signifikanter Unterschied zwischen den Rohdaten und den gefilterten Daten zu erkennen. Die ersten Schwankungen der gefilterten Werte sind vermutlich genau darauf zurückzuführen, dass der Kalmanfilter mit wenigen Schätzungen noch keinen stabilen Werte für die Kovarianzmatrix und den Bias berechnen konnte, weshalb die Schätzungen auch erst mit steigender Anzahl an Werten genauer werden.
     Der Pitch konnte mithilfe des Kalmanfilters eine Rauschreduktion von $59.4\%$ erzielen und für den Roll $37.4\%$ bei jeweils $100$ Testwerten.
 
     Aufgrund der Art wie der Gyrosensor auf dem Geschützarm montiert ist, ist für die Neigung allerdings nur der Roll-Wert von Bedeutung.
 
+   \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/kalman_comparison_pitch_2025-06-23.png}
+    \caption{Pitch: Vergleich Rohdaten und Kalman-Filter}
+    \label{fig:pitch_pitch}
+    \end{figure}
 
     \begin{figure}[H]
         \centering
-        % Bild für Pitch
-        \includegraphics[width=0.8\textwidth]{images/kalman_comparison_pitch_2025-06-23.png}
-        \vspace{1em} 
-        
-        % Bild für Roll
         \includegraphics[width=0.8\textwidth]{images/kalman_comparison_roll_2025-06-23.png}
-        
-        \caption{Vergleich der Rohdaten und Kalman-Filter geschätzten Werte für Pitch und Roll}
-        \label{fig:pitch_roll_vergleich}
+        \caption{Roll: Vergleich Rohdaten und Kalman-Filter}
+        \label{fig:roll_roll}
     \end{figure}
-
 \end{samepage}
+
 
