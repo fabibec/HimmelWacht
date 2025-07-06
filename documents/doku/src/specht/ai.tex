@@ -1,12 +1,3 @@
 \chapter{AI}
 
 \section{KI-gestützte Geschützführung Semiautomatischer Modus}
-\subsection{Einrichtung eines Kommunikationskanals (Jürgens)}
-Um tatsächlich Steuersignale in Echtzeit an den Roboter zu senden, muss zunächst entschieden werden, wie dies geschehen soll. Dabei gab es zwei Ansätze die in Betracht gezogen wurden: 
-\begin{itemize}
-    \item Kommunikation über WebSockets
-    \item Kommunikation über MQTT
-\end{itemize}
-Nach Absprachen mit dem Team wurde entschieden, dass die Kommunikation über MQTT erfolgen soll. Dies hat den Vorteil, dass mittels eines MQTT-Brokers eine zentrale Stelle geschaffen wird, an dem alle Nachricht gesammelt werden können. Dies ermöglicht neben dem grundlegend einfachen Austausch von Nachrichten auch eine gute Möglichkeit um das Projekt zu erweitern. So können weitere Sensorwerte oder auch die Stellung der Motoren über den MQTT-Broker ausgetauscht werden und optional für weitere Aktionen verwendet werden. Es wurde sich auf die Lösung mit dem Open-Source MQTT-Broker \texttt{Mosquitto} geeinigt. Dieser MQTT-Broker stellt eine leichtgewichtige Lösung bereit, welche nach dem Publish-Subscribe-Prinzip arbeitet \cite{Mosquitto}. So kann jeder Subscriber (Abonnent) ein oder mehrere Topics (Themen) abonnieren und erhält über diese dann Nachrichten. Dieser Ansatz soll den Nachrichtenverkehr für den Microcontroller minimieren, da hier zuvor bereits selektiert wird, welche Topics abonniert werden. 
-\\ 
-Die Mosquitto-Instanz wird auf dem Laborrechner installiert und ausgeführt. Die Konfiguration erfolgt über eine zentrale Konfigurationsdatei. Trotz korrekter Konfiguration konnte zunächst keine Verbindung zwischen dem MQTT-Broker und dem ESP32 hergestellt werden. Dieser Umstand wurde durch Ergänzung von Firewall-Regeln auf dem Laborrechner behoben. Es wurde auf dem Windows Rechner explizit eine eingehende und ausgehende Regel für Mosquitto erstellt. So konnte erfolgreich eine Verbindung zwischen dem ESP32 und dem MQTT-Broker hergestellt werden.

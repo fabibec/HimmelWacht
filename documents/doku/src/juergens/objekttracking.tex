@@ -1,0 +1,31 @@
+\chapter{Objekttracking (Jürgens)}
+\section{Ziel des Objekttrackings (Jürgens, Specht)}
+Eine optionale Anforderung die in diesem Projekt am Ende noch aktiv verfolgt und umgesetzt wurde, war die Implementierung eines Objekttrackings. So sollte es möglich sein, die Koordinaten der Bounding Box zur Steuerung des Geschützarms zu verwenden. Das Ziel war also, den Geschützarm immer so auszurichten, dass die Bounding Box des Objekts immer in der Mitte des Kamerabildes ist. 
+
+\section{Einrichtung des Kommunikationskanals (Jürgens)}
+Um tatsächlich Steuersignale an den Roboter zu senden, muss zunächst entschieden werden, wie dies geschehen soll. Dabei gab es zwei Ansätze die in Betracht gezogen wurden: 
+\begin{itemize}
+    \item Kommunikation über WebSockets
+    \item Kommunikation über MQTT
+\end{itemize}
+Nach Absprachen mit dem Team wurde entschieden, dass die Kommunikation über MQTT erfolgen soll. Dies hat den Vorteil, dass mittels eines MQTT-Brokers eine zentrale Stelle geschaffen wird, an dem alle Nachricht gesammelt werden können. Dies ermöglicht neben dem grundlegend einfachen Austausch von Nachrichten auch eine gute Möglichkeit um das Projekt zu erweitern. So können weitere Sensorwerte oder auch die Stellung der Motoren über den MQTT-Broker ausgetauscht werden und optional für weitere Aktionen verwendet werden. Es wurde sich auf die Lösung mit dem Open-Source MQTT-Broker \texttt{Mosquitto} geeinigt. Dieser MQTT-Broker stellt eine leichtgewichtige Lösung bereit, welche nach dem Publish-Subscribe-Prinzip arbeitet \cite{Mosquitto}. So kann jeder Subscriber (Abonnent) ein oder mehrere Topics (Themen) abonnieren und erhält über diese dann Nachrichten. Dieser Ansatz soll den Nachrichtenverkehr für den Microcontroller minimieren, da hier zuvor bereits selektiert wird, welche Topics abonniert werden. 
+\\ 
+Die Mosquitto-Instanz wird auf dem Laborrechner installiert und ausgeführt. Die Konfiguration erfolgt über eine zentrale Konfigurationsdatei. Trotz korrekter Konfiguration konnte zunächst keine Verbindung zwischen dem MQTT-Broker und dem ESP32 hergestellt werden. Dieser Umstand wurde durch Ergänzung von Firewall-Regeln auf dem Laborrechner behoben. Es wurde auf dem Windows Rechner explizit eine eingehende und ausgehende Regel für Mosquitto erstellt. So konnte erfolgreich eine Verbindung zwischen dem ESP32 und dem MQTT-Broker hergestellt werden.
+
+\section{Implementierung des Objekttrackings (Jürgens, Specht)}
+Mit bestehender und funktionierender MQTT-Verbindung konnte nun das Objekttracking implementiert werden. Dabei musste besonders auf die Art und Weise geachtet werden, wie die Motorsteuerung implementiert wurde. Die Motoren werden mit Statusnachrichten versorgt, welche die absolute Position der Motoren angeben. So würde das Senden mehrere Nachrichten mit dem selben Inhalt zu einer einzigen Bewegung führen. Somit sind die Nachrichten idempotent und können mehrfach gesendet werden, ohne dass sich die Position der Motoren ändert.
+Wichtig war außerdem, dass die Berechnung der Drehwinkel auf dem Laborrechner erfolgt. Hiermit soll der ESP32 entlastet werden, da dieser nur als Abonnent des MQTT-Topics fungiert und die Motoren steuert. 
+\\
+Mit diesem Wissen wurde zunächst der Ansatz eines Mappings verfolgt. Dabei wurde der Geschützarm in die Null-Stellung gebracht. Durch Trial-and-Error wurden dabei die maximal benötigten Drehwinkel der Motoren die benötigt werden um die Kamera an den Bildrand zu bewegen, ermittelt. Diese Werte wurden dann in ein Mapping überführt. So sollte sich das errechnete Zentrum der Bounding Box in einen benötigten Drehwinkel übersetzen lassen.\\
+Dieses Vorgehen hat sich jedoch als nicht praktikabel herausgestellt. So wurden beispielsweise für das Erreichen des rechten Bildrandes eine andere Motorstellung benötigt als für das Erreichen des linken Bildrandes. So wurde beispielsweise für das Erreichen des rechten Bildrandes der horizontale Winkel auf -15 gesetzt, für das Erreichen des linken Bildrandes jedoch +18. Aufgrund dieser Abweichungen und einem inkosistenten Verhalten der Motoren wurde der Ansatz verworfen und nicht weiter verfolgt.
+\\
+Der zweite Ansatz wurde gemeinsam mit Michael Specht erarbeitet und verfolgt die Idee, die Kameramerkmale direkt mit in die Berechnung des Drehwinkels einzubeziehen. Dieser Ansatz erwies sich als deutlich erfolgreicher hatte dabei aber auch eine höhere Komplexität. %Dabei wurde zunächst die Seitenverhältnisse ermittelt. Diese wurden aus der Breite und Höhe des Kamerabildes ermittelt. Diese liegen bei 1280 Pixeln in der Breite und 1080 Pixel in der Höhe. Daraus ergibt sich das Seitenverhältnis (Aspect Ratio) des Kamerabildes:
+
+%\begin{equation}
+%    \text{Aspect\_ratio} = \frac{\text{Bildbreite}}{\text{Bildhöhe}} = \frac%{1280}{1080} = 1{,}185
+%\end{equation}
+%
+%Anhand des Datenblattes der Kamera wurde die diagonale Sichtweite (diagonal %fov) ermittelt. Diese beträgt bei dem Raspberry Camera Module 3 75 Grad \cite%{raspberrypi5cammodule3}. Für eine korrekte Berechnung der Drehwinkel ist eine %Umrechnung in Radiant notwendig. Die Python Bibliothek \texttt{math} stellt %dafür die Funktion \texttt{radians()} bereit.
+
+
+ % Ich habe keine Ahnung was Claude da im Code gemacht hat, vielleicht hast du ja eine Ahnung? Ich hab es mit Winkeln nicht so :D 
