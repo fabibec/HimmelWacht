@@ -1,24 +1,16 @@
 #include "sdkconfig.h"
 
-#include <stdio.h>
-
 #include "esp_log.h"
 #include "esp_wifi.h"
 
 #include "wifi-stack.h"
 #include "mqtt-stack.h"
-
-#include "freertos/task.h"
-
-#include "driver/uart.h"
 #include "ds4-driver.h"
 #include "vehicle-control.h"
 #include "motor-driver.h"
 #include "diff-drive.h"
 #include "platform-control.h"
 #include "fire-control.h"
-
-#define PWM_CHANNEL 0
 
 // Define GPIO pins for motors
 #define RIGHT_MOTOR_PWM_GPIO 23
@@ -29,14 +21,19 @@
 
 #define MAX_INPUT_VALUE 512
 
-#define TAG "main"
-
 // Enter the Wi-Fi credentials here
 #define WIFI_SSID "TI Roboter"
 #define WIFI_PASSWORD "ITRobot!"
 
-void app_main(void)
-{
+// Tag for logging
+#define TAG "main"
+
+/**
+ * @authors Fabian Becker, Michael Specht
+ */
+void app_main(void){
+
+    // Setup Wifi
     esp_err_t ret = wifi_stack_init(WIFI_SSID, WIFI_PASSWORD);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to connect to Wi-Fi network");
@@ -81,6 +78,13 @@ void app_main(void)
         .internal_pullup = true,
     };
 
+    // Fire control config
+    fire_control_config_t fire_control_cfg = {
+        .gun_arm_channel = 0,  // Set the channel for the gun arm
+        .flywheel_control_gpio_port = 5, // Set the GPIO port for the flywheel control
+        .run_on_core = 1                 // Set the core to run on
+    };
+
     // Platform interface configuration
     platform_config_t platform_cfg = {
         .pwm_board_config = pwm_board_cfg,
@@ -92,29 +96,6 @@ void app_main(void)
         .platform_y_start_angle = 48,
         .platform_y_left_stop_angle = 0,
         .platform_y_right_stop_angle = 80};
-
-    // Configuration for vehicle control interface
-    vehicle_control_config_t manual_control_cfg = {
-        .button_hold_threshold_us = 1500000, // 1.5 seconds
-        .max_deg_per_sec_x = 300,
-        .max_deg_per_sec_y = 150,
-        .input_processing_freq_hz = 60,
-        .deadzone_x = 30,
-        .deadzone_y = 100,
-        .deadzone_drive_update = 10,
-        .core = 1};
-
-    // Differential drive configuration
-    diff_drive_config_t diff_drive_config = {
-        .max_input = MAX_INPUT_VALUE,
-        .cmd_queue_size = 10,
-        .recovery_time_ms = 1000,
-        .task_priority = 0,
-        .task_stack_size = 4096,
-        .task_core_id = 0,
-        .task_delay_ms = 50,
-        .queue_timout_ms = 10,
-    };
 
     // Left motor configuration
     motor_config_t left_motor_config = {
@@ -146,16 +127,33 @@ void app_main(void)
         .pwm_duty_limit = 100,
         .mynr = 1};
 
-
-    platform_init(&platform_cfg);
-
-    // Fire control config
-    fire_control_config_t fire_control_cfg = {
-        .gun_arm_channel = PWM_CHANNEL,  // Set the channel for the gun arm
-        .flywheel_control_gpio_port = 5, // Set the GPIO port for the flywheel control
-        .run_on_core = 1                 // Set the core to run on
+    // Differential drive configuration
+    diff_drive_config_t diff_drive_config = {
+        .max_input = MAX_INPUT_VALUE,
+        .cmd_queue_size = 10,
+        .recovery_time_ms = 1000,
+        .task_priority = 0,
+        .task_stack_size = 4096,
+        .task_core_id = 0,
+        .task_delay_ms = 50,
+        .queue_timout_ms = 10,
     };
 
+    // Configuration for vehicle control interface
+    vehicle_control_config_t manual_control_cfg = {
+        .button_hold_threshold_us = 1500000, // 1.5 seconds
+        .max_deg_per_sec_x = 300,
+        .max_deg_per_sec_y = 150,
+        .input_processing_freq_hz = 60,
+        .deadzone_x = 30,
+        .deadzone_y = 100,
+        .deadzone_drive_update = 10,
+        .core = 1};
+
+    // Initialize platform
+    platform_init(&platform_cfg);
+
+    // Initialize the fire control
     fire_control_init(&fire_control_cfg);
 
     // Initialize differential drive

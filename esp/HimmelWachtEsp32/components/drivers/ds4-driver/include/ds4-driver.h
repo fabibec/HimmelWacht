@@ -23,7 +23,7 @@
 extern QueueHandle_t ds4_input_queue;
 
 typedef struct {
-    int16_t leftTrigger, rightTrigger; // -512 to 512
+    int16_t leftTrigger, rightTrigger; // 0 to 1023
     int16_t leftStickX, leftStickY; // -512 to 512
     int16_t rightStickX, rightStickY; // -512 to 512
     uint8_t dpad; // 0x01 = up, 0x02 = down, 0x04 = right, 0x08 = left

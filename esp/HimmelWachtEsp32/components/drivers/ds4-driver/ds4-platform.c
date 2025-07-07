@@ -181,7 +181,7 @@ static const uni_property_t* get_property(uni_property_idx_t idx) {
 }
 
 /*
-    Called when an OOB event occurs. In case of the Dualshock4 controller when the PS Button is pressed.
+    Called when an OOB event occurs. In case of the Dualshock4 controller, when the PS Button is pressed.
 
     @param event: the OOB event
     @param data: the data associated with the event

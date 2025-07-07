@@ -1,3 +1,11 @@
+/**
+ * @file
+ * @brief Vehicle and Platform Control (Central Component)
+ *
+ * This component merge all of the other componenets we created together to able able to control the vehicle with a combination of AI and the Dualshock4 Controller
+ *
+ * @authors Fabian Becker, Michael Specht
+ */
 #ifndef _VEHICLE_CONTROL_H_
 #define _VEHICLE_CONTROL_H_
 #include <esp_err.h>

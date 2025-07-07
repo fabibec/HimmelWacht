@@ -17,15 +17,19 @@
 #include <esp_timer.h>
 
 #define VEHICLE_CONTROL_TAG "Vehicle Control"
+
+// Low pass filter constants
 #define STICK_FILTER_ALPHA _IQ21(0.2)
 #define FILTERED_STICK_DEADZONE _IQ21(0.1)
 
+// Current vehicle operating mode
 typedef enum{
-    MANUAL_TURRET_CONTROL,
-    AUTOMATIC_TURRET_CONTROL
+    MANUAL_TURRET_CONTROL, // no AI, only controller
+    AUTOMATIC_TURRET_CONTROL // platform controlled by AI
 } vehicle_state_t;
 static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 
+// Lightbar colors for the two modes
 #define MANUAL_MODE_COLOR_R 80
 #define MANUAL_MODE_COLOR_G 200
 #define MANUAL_MODE_COLOR_B 120
@@ -37,6 +41,7 @@ static vehicle_state_t vehicle_state = MANUAL_TURRET_CONTROL;
 #define DRIVING_NULL_BOUNDARY 75
 #define DRIVING_MIN_CHANGE 20
 
+// Prototypes
 static inline void process_manual_fire(uint16_t r2_value);
 static inline void process_manual_platform_left_right(int16_t stickX);
 static inline void process_manual_platform_up_down(int16_t stickY);
@@ -60,6 +65,7 @@ static _iq21 dt = 0;
 
 static int64_t button_hold_threshold_us = 0;
 
+// Data structure to be able to check if a button has been held for a certain amount of time
 typedef struct {
     bool is_held;
     int64_t press_time;
@@ -71,15 +77,19 @@ static ButtonHoldState platform_angle_reset_button_state = {0};
 static ButtonHoldState vehicle_mode_change_button_state = {0};
 
 /**
+ * Set both platform axes to their starting position
+ *
  * @author Fabian Becker
  */
 static inline void reset_platform_angles(void) {
     platform_x_to_start(&platform_x_angle);
     platform_y_to_start(&platform_y_angle);
-    ds4_rumble(0, 100, 0xF0, 0xF0);
+    ds4_rumble(0, 150, 0xF0, 0xF0);
 }
 
 /**
+ * Sets the lightbar color based on the current operating mode
+ *
  * @author Fabian Becker
  */
 static inline void set_vehicle_mode_color(void) {
@@ -91,6 +101,8 @@ static inline void set_vehicle_mode_color(void) {
 }
 
 /**
+ * Callback function that is activated, when a mode change is triggered
+ *
  * @author Fabian Becker
  */
 static inline void change_vehicle_mode(void) {
@@ -98,18 +110,18 @@ static inline void change_vehicle_mode(void) {
         // turn on command receive in mqtt
         set_discard_command_status(false);
         vehicle_state = AUTOMATIC_TURRET_CONTROL;
-        //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         platform_reset(&platform_x_angle, &platform_y_angle);
     } else {
         set_discard_command_status(true);
-        //ds4_lightbar_color(MANUAL_MODE_COLOR_R, MANUAL_MODE_COLOR_G, MANUAL_MODE_COLOR_B);
         vehicle_state = MANUAL_TURRET_CONTROL;
     }
     set_vehicle_mode_color();
-    ds4_rumble(0, 100, 0xF0, 0xF0);
+    ds4_rumble(0, 150, 0xF0, 0xF0);
 }
 
 /**
+ * Logic to check if a button is pressed for a certain amount of time and execute a callback, if true
+ *
  * @author Fabian Becker
  */
 static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
@@ -139,6 +151,8 @@ static bool check_button_hold(bool is_pressed, ButtonHoldState *button){
 }
 
 /**
+ * Main Control loop of the vehicle
+ *
  * @author Fabian Becker, Michael Specht
  */
 static void vehicle_control_task(void* arg) {
@@ -187,8 +201,6 @@ static void vehicle_control_task(void* arg) {
                 // if(mqtt_cmd.fire_command) {
                 //     fire_control_trigger_shot();
                 // }
-            } else {
-                // stay in position
             }
         }
 
@@ -241,6 +253,8 @@ static inline void process_drive(diff_drive_handle_t *diff_drive, int16_t x, int
 }
 
 /**
+ * Triggers a shot if the r2 trigger is pressed with a certain amount of force
+ *
  * @author Fabian Becker
  */
 static inline void process_manual_fire(uint16_t r2_value){
@@ -256,6 +270,8 @@ static inline void process_manual_fire(uint16_t r2_value){
 }
 
 /**
+ * Calculates the platform rotation based on the x-axis of the right stick
+ *
  * @author Fabian Becker
  */
 static inline void process_manual_platform_left_right(int16_t stickX){
@@ -292,6 +308,8 @@ static inline void process_manual_platform_left_right(int16_t stickX){
 }
 
 /**
+ * Applys an angle to rotate the platform
+ *
  * @author Fabian Becker
  */
 static inline void process_platform_left_right(){
@@ -306,6 +324,8 @@ static inline void process_platform_left_right(){
 }
 
 /**
+ * Calculates the platform incline based on the y-axis of the right stick
+ *
  * @author Fabian Becker
  */
 static inline void process_manual_platform_up_down(int16_t stickY){
@@ -342,6 +362,8 @@ static inline void process_manual_platform_up_down(int16_t stickY){
 }
 
 /**
+ * Applys an angle to tilt the platform
+ *
  * @author Fabian Becker
  */
 static inline void process_platform_up_down(){
@@ -356,6 +378,8 @@ static inline void process_platform_up_down(){
 }
 
 /**
+ * Initialize all the things needed
+ *
  * @author Fabian Becker
  */
 esp_err_t vehicle_control_init(vehicle_control_config_t* cfg, diff_drive_handle_t *diff_drive) {
