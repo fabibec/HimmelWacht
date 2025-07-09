@@ -140,7 +140,7 @@ Erste Tests der MQTT-Komponente konnten ohne Fahrzeug durchgeführt werden. Dazu
 
 Die Fahrzeugsteuerung ist eine Abstraktionsebene, die als zentrale Anlaufstelle für Befehle vom Controller dient. Darin ist der Haupttask implementiert, der die Steuerbefehle entgegennimmt und an die entsprechenden Queues weiterleitet. Diese Queues werden dann von den Tasks der jeweiligen Komponenten abgearbeitet. Neben der Geschütz- und der Feuersteuerung ist auch die Ansteuerung der Differentialantrieb Logik eine der zentralen Komponenten. Darüber hinaus ist die Fahrzeugsteuerung auch das Modul, das letztendlich in der Main-Methode mithilfe diverser komponenten-spezifischer Strukturen initialisiert wird. \newline
 
-\subsection{Regelschleife (Becker)}
+\subsection{Regelschleife (Becker)} \label{sec:esp32_control_loop}
 
 Die Grundlage der Fahrzeugsteuerung bildet eine Regelschleife, welche synchron zur Update-Frequenz des DualShock4-Treibers mit 60 Hz ausgeführt wird. 
 Zunächst wird in dieser Schleife gewartet, bis eine Verbindung zum Controller hergestellt wurde.
@@ -226,3 +226,52 @@ Allerdings wurde infolgedessen festgestellt, dass die Queue im Stand überläuft
 Deshalb wurde, wie im Zentrum der Abbildung~\ref{fig:diff_drive_logic} zu sehen, eine Nullposition definiert. Diese wird beim Auftreten, sprich Nicht-Bewegen des linken Sticks, detektiert. Daraufhin wird ein Stop eingeleitet. Sobald dieser abgearbeitet wurde wird ein Flag gesetzt, das anzeigt, dass die Nullposition bereits abgearbeitet wurde. Somit wird verhindert, dass das Stoppen unnötig wiederholt wird und die Queue überläuft. Sobald der linke Stick wieder bewegt wird, wird das Flag zurückgesetzt und die Geschwindigkeit des Fahrzeugs angepasst. \newline
 
 \subsection{MQTT-Anbindung (Specht)}
+
+Um die MQTT-Komponente in der Fahrzeugsteuerung nutzen zu können, waren Code-seitig nur wenige Anpassungen notwendig. Die Regelschleife, vgl. Abschnitt~\ref{sec:esp32_control_loop}, wurde so erweitert, dass eine Unterscheidung des Modus, wie bereits durch den Kollegen Becker beschrieben, vorgenommen wird. Zu Beginn des Projekts wurde der manuelle Modus priorisiert, weshalb in diesem Integrationsschritt Änderungen im Code vorgenommen mussten, um auch den semi-automatischen Modus vollumfänglich nutzen zu können. \newline
+
+Beim Kompilieren des Codes kam daraufhin eine Meldung, dass die Größe des erzeugten Binarys (1,254,496 bytes) den verfügbaren Speicher (1,048,576 bytes - 1MB) überschreitet. Der erste Eindruck war, dass dies vorrangig auf die Vielzahl an Komponenten zurückzuführen, die im Projekt implementiert wurden, zurückzuführen ist.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/memory_size_before.png}
+    \caption{Speicherauslastung vor der Optimierung}
+    \label{fig:memory_size_before}
+\end{figure}
+
+Die Ausgabe der Speicherauslastung, wie in Abbildung~\ref{fig:memory_size_before} zu sehen, erfolgt über die Anweisung \textit{idf.py size}. Sie zeigt zwar zum einen den Fehler an sich, jedoch auch, dass noch etwas Speicher verfügbar ist. Nach eingehender Analyse konnte damit das Problem isoliert werden. Grund war nicht, dass prinzipiell zu wenig Speicher zur Verfügung stand, sondern dass die Konfiguration der Partitionierung des Flash-Speichers im ESP32 nicht optimal war. Im ESP ist standardmäßig eine Partitionierung mit 1MB Flash-Speicher für das Binary vorgesehen. Diese Partitionierung ist für die meisten Anwendungsfälle ausreichend, jedoch nicht für dieses Projekt. Die Partitionierung kann jedoch über den Befehl \textit{idf.py menuconfig} und dem sich öffnenden Konfigurationsassistenten angepasst werden.
+
+\begin{figure}[H]
+    \centering
+
+    \begin{subfigure}[b]{0.40\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/partition_table_before.png}
+        \caption{Vor Optimierung}
+        \label{fig:partition_table_before}
+    \end{subfigure}
+    \hspace{0.05\textwidth} % Adjust this value as needed
+    \begin{subfigure}[b]{0.40\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/partition_table_after.png}
+        \caption{Nach Optimierung}
+        \label{fig:partition_table_after}
+    \end{subfigure}
+
+    \caption{Partitionierung des Flash-Speichers vor und nach der Optimierung}
+    \label{fig:partition_table}
+\end{figure}
+
+Abbildung \ref{fig:partition_table} zeigt die Partitionierung des Flash-Speichers vor und nach der Optimierung. OTA steht dabei für Over-the-Air Updates. Diese wurden in diesem Projekt nicht berücksichtigt, weshalb kein Speicher dafür reserviert werden musste. \newline
+
+Das Problem konnte letztendlich dadurch behoben werden, dass anstatt der normalen App-Größe nun die \textit{Large}-Variante verwendet wurde. In dieser Konfiguration werden ca. 1,5 MB für die App zur Verfügung gestellt. Die Auslastung des Speichers sah danach identisch wie in Abbildung~\ref{fig:memory_size_before} aus, jedoch wurde der Fehler nicht mehr angezeigt. Insgesamt benötigt die Binary nun 82 \% des verfügbaren Speichers, was für den ESP32 eine akzeptable Auslastung in Anbetracht der implementierten Komponenten darstellt. \newline
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/memory_size_after.png}
+    \caption{Freier Speicher nach der Optimierung}
+    \label{fig:memory_size_after}
+\end{figure}
+
+Die Initialisierung des WiFi-Stacks und des MQTT-Stacks sind in der main-Funktion des Programms implementiert. Dabei wird der WiFi-Stack zuerst initialisiert, um eine Verbindung zum WLAN-Netzwerk herzustellen. Anschließend wird der MQTT-Stack mit allen notwendigen Parametern, wie beispielsweise der IP-Adresse des MQTT-Brokers, geladen. Auch dieser Integrationsschritt wurde durch paralleles Logging in der KOnsole begleitet. Die Verbindungsversuche zum Netzwerk verliefen durchwegs positiv. Ausgenommen von Spitzen der Latenz, die durch die Übertragung der Daten bei mehreren Teilnehmern über das WLAN-Netzwerk verursacht wurden. Sollte es zu einem Verbindungsabbruch kommen, soll in erster Linie versucht werden, die Verbindung automatisch wiederherzustellen. Dies gelang meistens auch, jedoch kam es in seltenen Fällen zu einem Timeout, der nicht automatisch behoben werden konnte. In diesem Fall wurde der ESP32 neu gestartet. \newline
+
+Erste Armbewegungen konnten ohne Fahrzeug durchgeführt werden. Dabei wurde abermals auf \textit{mosquitto} als MQTT-Broker auf dem Arbeitsrechner zurückgegriffen. Zu diesem Zeitpunkt war die Implementierung des Objekttrackings noch nicht abgeschlossen, weshalb die Nachrichten noch manuell gesendet werden mussten. Feste Winkelpositionen konnten nach manueller Anpassung erfolgreich an den Topic \textit{vehicle/control} gesendet werden. Die Fahrzeugsteuerung konnte die Nachrichten korrekt empfangen und die Plattform entsprechend bewegen. Diese Integration ermöglichte nun für den weiteren Verlauf des Projekts, dass zukünftig die KI-Komponente die Plattform steuert. Die konkrete Umsetzung des Objekttrackings wird im Abschnitt~\ref{sec:objekttracking} beschrieben. \newline
