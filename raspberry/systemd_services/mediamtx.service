@@ -1,0 +1,14 @@
+[Unit]
+Description=MediaMtx Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/home/hw/Desktop/mediamtx
+ExecStart=/home/hw/Desktop/mediamtx/mediamtx /home/hw/Desktop/mediamtx/mediamtx.yml
+Restart=on-failure
+User=hw
+Group=hw
+
+[Install]
+WantedBy=multi-user.target
