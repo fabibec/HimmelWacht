@@ -5,18 +5,45 @@ import asyncio
 import json
 import signal
 import logging
-from sensors_startup.gyro_startup import gyro_data
-from sensors_startup.ultrasonic_startup import ultrasonic_data
+import socket
+import os
+from dotenv import load_dotenv
+from sensors.gyro_startup import gyro_data
+from sensors.ultrasonic_startup import ultrasonic_data
 from aiohttp import web
 import websockets
 
+# Load environment variables from .env file
+load_dotenv()
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_ip_address():
+    """Get the IP address of current machine."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0)
+        # doesn't even have to be reachable
+        s.connect(('10.254.254.254', 1))
+        ip = s.getsockname()[0]
+        s.close()
+        logger.info(f"Successfully determined local IP: {ip}")
+        return ip
+    except Exception as e:
+        logger.warning(f"Could not determine local IP: {e}. Falling back to 127.0.0.1")
+        return "127.0.0.1"
+
+LOCAL_IP = get_ip_address()
 
 class SensorServer:
     def __init__(self):
         self.clients = set()
         self.main_tasks = []
+        self.webserver_port = int(os.getenv('WEBSERVER_PORT', 8000))
+        self.websocket_port = int(os.getenv('WEBSOCKET_PORT', 8765))
+        self.lab_pc_ip = os.getenv('LAB_PC_IP', '172.16.3.105')
+        self.bounding_box_port = int(os.getenv('BOUNDING_BOX_PORT', 8001))
 
     async def broadcast(self, message):
         """Broadcast message to all connected WebSocket clients"""
@@ -97,7 +124,7 @@ class SensorServer:
 
     async def bbox_connection_handler(self):
         """Monitor bounding box connection"""
-        BBOX_URI = "ws://172.16.3.105:8001"
+        BBOX_URI = f"ws://{self.lab_pc_ip}:{self.bounding_box_port}"
         logger.info(f"Attempting connection to {BBOX_URI} (connection monitor only)...")
 
         while True:
@@ -142,23 +169,34 @@ class SensorServer:
             self.clients.discard(websocket)
             logger.info(f"Client removed: {client_address}, remaining clients: {len(self.clients)}")
 
+    async def get_config(self, _):
+        """Return the WebSocket and Bounding Box ports"""
+        config = {
+            'RASPBERRY_IP': LOCAL_IP,
+            'WEBSOCKET_PORT': self.websocket_port,
+            'LAB_PC_IP': self.lab_pc_ip,
+            'BOUNDING_BOX_PORT': self.bounding_box_port
+        }
+        return web.json_response(config)
+
     async def start_http_server(self):
         """Start HTTP server for static files"""
         app = web.Application()
-        #app.router.add_static('/', path='./static', show_index=True)
+        app.router.add_get('/config', self.get_config)
         app.router.add_get('/favicon.ico', lambda request:web.FileResponse('./static/favicon.ico'))
+        app.router.add_get('/script.js', lambda request: web.FileResponse('./static/script.js'))
         app.router.add_get('/', lambda request: web.FileResponse('./static/index.html'))
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8000)
+        site = web.TCPSite(runner, '0.0.0.0', self.webserver_port)
         await site.start()
-        logger.info("HTTP server at http://172.16.9.13:8000/index.html")
+        logger.info(f"HTTP server at http://{LOCAL_IP}:{self.webserver_port}/index.html")
         return runner
 
     async def start_websocket_server(self):
         """Start WebSocket server"""
-        ws_server = await websockets.serve(self.ws_handler, "0.0.0.0", 8765)
-        logger.info("WebSocket server at ws://172.16.9.13:8765")
+        ws_server = await websockets.serve(self.ws_handler, "0.0.0.0", self.websocket_port)
+        logger.info(f"WebSocket server at ws://{LOCAL_IP}:{self.websocket_port}")
         return ws_server
 
     def signal_handler(self):

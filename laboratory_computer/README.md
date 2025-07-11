@@ -1,14 +1,31 @@
 # Laboratory Computer
 
-This part of the repo contains all the code that needs to be executed on the laboratory computer.
+This directory contains all code that needs to be executed on the laboratory computer.
 
-## AI object detection
+## AI Object Detection
 
-To run the AI-part of this project:
+### Prerequisites
 
-Prerequisites: Laboratory Computer needs to be connected to TIRoboter WIFI
+- The laboratory computer must be connected to the **TIRoboter** Wi-Fi.
+- Ensure that [Mosquitto MQTT](https://mosquitto.org/download/) is installed.
+- NVIDIA GPU with CUDA support is required.
 
-1. Start MQTT-Broker with correct configuration => mosquttio.exe -c mosquitto.conf
-2. Create execution-environment with CUDA-Support => setup.bat
-3. Run webRTC_inference/Inference_Scripts/receiver_inference.py
+### Steps to Run Inference
 
+1. **Start the MQTT Broker** <br>
+   Run the following command with the correct configuration file:
+   ```cmd
+   mosquitto.exe -c .\mosquitto\mosquitto.conf
+   ```
+
+2. **Set up the CUDA-enabled Python environment** <br>
+    Execute the setup script:
+    ```cmd
+    .\setup\setup.bat
+    ```
+
+3. **Run the inference script** <br>
+    Launch the AI inference receiver:
+    ```cmd
+    python webRTC_inference/Inference_Scripts/receiver_inference.py
+    ```

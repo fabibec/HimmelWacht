@@ -1,1 +1,0 @@
-# the used flavicon is free for use. src: https://www.flaticon.com/free-icon/missiles_3857446?term=military&page=1&position=13&origin=tag&related_id=3857446
