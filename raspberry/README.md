@@ -1,12 +1,26 @@
-# Raspberry Pi
+# Raspberry Pi Code
 
-This part of the repo contains all the code that needs to be executed on the Raspberry Pi.
+his directory contains all code that needs to be executed on the Raspberry Pi.
 
-## Credentials
+## Directory Structure
 
-Username: hw
-Passwort: dt
+```
+.
+├── html_server/         # Python-based web server
+├── mediamtx/            # Configuration for the MediaMTX media server.
+├── sensors/             # Source code for the Gyroscope and Ultrasonic sensors.
+├── systemd_services/    # systemd service files.
+└── webRTC_sender/       # Deprecated peer-to-peer WebRTC sender script.
+```
 
+## System Setup and Configuration
+
+### 1. Raspberry Pi Credentials
+
+- **Username**: `hw`
+- **Password**: `dt`
+
+Access the Raspberry Pi via SSH:
 ```bash
-ssh hw@<IP_ADRESS>
+ssh hw@<IP_ADDRESS>
 ```
