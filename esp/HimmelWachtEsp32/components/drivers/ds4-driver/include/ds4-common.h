@@ -1,3 +1,9 @@
+/**
+ * @file
+ * @brief Shared constants and datatypes for the DualShock 4 driver
+ *
+ * @author Fabian Becker
+ */
 #ifndef _DS4_CONSTS_H_
 #define _DS4_CONSTS_H_
 #include <stdint.h>
@@ -20,7 +26,7 @@ extern EventGroupHandle_t ds4_event_group;
 
 // Event bit for DS4 controller battery level
 // This is used to indicate that the battery level is below the threshold
-// This looks the lightbar for custom color
+// This locks the lightbar
 #define DS4_BATTERY_LOW (1 << 1)
 extern const uint8_t low_battery_threshold;
 extern const uint16_t low_battery_blinking_interval_ms;
@@ -51,26 +57,30 @@ extern const uint32_t input_processing_interval_us;
 // Queue size of the output event queue
 extern const uint8_t output_event_queue_size;
 
-// Types for the output event queue
+// Rumble event
 typedef struct {
     uint16_t start_delay_ms, duration_ms;
     uint8_t weak_magnitude, strong_magnitude;
 } ds4_rumble_t;
 
+// Lightbar Event
 typedef struct {
     uint8_t red, green, blue;
 } ds4_lightbar_color_t;
 
+// Event union
 typedef union {
     ds4_rumble_t rumble;
     ds4_lightbar_color_t lightbar;
 } ds4_output_event_params_t;
 
+// Event type enum
 typedef enum {
     DS4_OUTPUT_EVENT_RUMBLE = 0,
     DS4_OUTPUT_EVENT_LIGHTBAR_COLOR = 1,
 } ds4_output_event_type_t;
 
+// Shared type for the output event queue
 typedef struct {
     ds4_output_event_type_t event_type;
     ds4_output_event_params_t event_params;

@@ -4,7 +4,7 @@
 
 Zu Beginn des Projekts wurde in Abstimmung mit Fabian Becker sowie im Austausch mit Andreas Wittmann (Studienkollege) entschieden, FreeCAD als CAD-Software zu verwenden. Der Grund hierfür war die einfache Kollaboration innerhalb der Projektgruppe sowie der unkomplizierte Erfahrungsaustausch mit der Arbeitsgruppe um A. Wittmann. Andere Softwarelösungen wie OnShape wurden diskutiert, aufgrund der Komplexität und der damit verbundenen Einarbeitungszeit im Hinblick auf die Projektlaufzeit jedoch verworfen. FreeCAD ist zudem eine Open-Source-Software, die neben Fedora auch auf Debian-Systemen lauffähig ist. So konnte die Software problemlos auf den Arbeitsrechnern der Teammitglieder installiert werden.
 
-Grundsätzlich stützt sich die Konstruktion auf vorhandene STL-Vorlagen. Ein Beispielprojekt aus dem Internet diente als Grundlage für die Arbeit.
+Grundsätzlich stützt sich die Konstruktion auf vorhandene STL-Vorlagen. Mehrere Beispielprojekte aus dem Internet dienten als Grundlage für die Arbeit \cite{cad_turret_blueprint,cad_flywheel_blueprint,cad_esp_case_blueprint}.
 
 \section{Geschützarm Version 1 (Specht) \label{sec:cad_gunarm_v1}}
 
@@ -17,9 +17,9 @@ Bevor mit der Konstruktion begonne wurde, wurde im Team besprochen, welche Kompo
     \item 2x 28BYJ-48 Schrittmotor
 \end{itemize}
 
-Ziel des ersten Entwurfs war es, diese kompakt auf dem Arm zu integrieren. Die angedachten Schrittmotoren wichen jedoch von der Vorlage aus dem Beispielprojekt ab, weshalb der Geschützarm von Grund auf neu konstruiert werden musste.
+Ziel des ersten Entwurfs war es, diese kompakt auf dem Arm zu integrieren. Die angedachten Schrittmotoren wichen jedoch von der Vorlage aus dem Beispielprojekt \cite{cad_turret_blueprint} ab, weshalb der Geschützarm von Grund auf neu konstruiert werden musste.
 
-Alle Module sollten zentral über der Abschusseinrichtung platziert werden, um eine korrekte Berechnung der Flugbahn zu ermöglichen. Der Ultraschall-Sensor sollte dabei hochkant nach vorne gerichtet sein, um die Entfernung zum Ziel zu messen. Die Kamera sollte schräg nach oben gerichtet sein, um den Himmel zu überwachen. Der Beschleunigungssensor sollte liegend auf dem Arm montiert werden, um die Beschleunigung des Arms zu messen. Die Schrittmotoren mussten in einem geeigneten Abstand zueinander montiert werden, sodass die Flywheel-Konstruktion des Arms funktioniert. Letzteres konnte durch das Vermessen der Vorlage aus dem Beispielprojekt realisiert werden. Für die restlichen Anforderungen waren die korrekten Maße nötig. Für die Montage der Kamera konnte eine bereits 3D-gedruckte Halterung aus einer anderen Gruppe benutzt werden. Die Haltevorrichtung für den Beschleunigungssensor wurde aus einer STL-Vorlage übernommen und angepasst. Auch für die Schrittmotoren konnte auf ein Modell aus dem Internet zurückgegriffen werden, weshalb es nicht nötig war, die komplexe Geometrie eigenständig zu vermessen. Einzig die Maße für den Ultraschall-Sensor wurden recherchiert und durch Nachmessen validiert.
+Alle Module sollten zentral über der Abschusseinrichtung platziert werden, um eine korrekte Berechnung der Flugbahn zu ermöglichen. Der Ultraschall-Sensor sollte dabei hochkant nach vorne gerichtet sein, um die Entfernung zum Ziel zu messen. Die Kamera sollte schräg nach oben gerichtet sein, um den Himmel zu überwachen. Der Beschleunigungssensor sollte liegend auf dem Arm montiert werden, um die Beschleunigung des Arms zu messen. Die Schrittmotoren mussten in einem geeigneten Abstand zueinander montiert werden, sodass die Flywheel-Konstruktion des Arms funktioniert. Letzteres konnte durch das Vermessen der Vorlage aus dem Beispielprojekt \cite{cad_turret_blueprint} realisiert werden. Für die restlichen Anforderungen waren die korrekten Maße nötig. Für die Montage der Kamera konnte eine bereits 3D-gedruckte Halterung aus einer anderen Gruppe benutzt werden. Die Haltevorrichtung für den Beschleunigungssensor wurde aus einer STL-Vorlage \cite{cad_gyro_blueprint} übernommen und angepasst. Auch für die Schrittmotoren konnte auf ein Modell aus dem Internet \cite{cad_servo_v1_blueprint} zurückgegriffen werden, weshalb es nicht nötig war, die komplexe Geometrie eigenständig zu vermessen. Einzig die Maße für den Ultraschall-Sensor wurden recherchiert \cite{cad_geometry_srf02} und durch Nachmessen validiert.
 
 \begin{figure}[h]
     \centering
@@ -46,7 +46,7 @@ Außerdem musste sichergestellt werden, dass der Geschützarm an das Magazin mon
 
 \section{Geschützarm Version 2 (Specht)}
 
-Im Laufe des Projektes wurde in Abstimmung mit Fabian Becker klar, dass die Schrittmotoren aufgrund zu geringer Leistung nicht für die Flywheel-Konstruktion geeignet sind. Daraufhin wurde sich für die originalen Motoren aus dem Beispielprojekt entschieden. Das hatte zur Folge, dass der Geschützarm neu konstruiert werden musste, da die Maße der neuen Motoren von den Alten abwichen. Aus diesem Grund wurde der Geschützarm der Vorlage als Basis genommen und die Grundidee der Version 1 beibehalten.
+Im Laufe des Projektes wurde in Abstimmung mit Fabian Becker klar, dass die initial angedachten Schrittmotoren aufgrund zu geringer Leistung nicht für die Flywheel-Konstruktion geeignet sind. Daraufhin wurde sich für die originalen Motoren aus dem Beispielprojekt \cite{cad_turret_blueprint} entschieden. Das hatte zur Folge, dass der Geschützarm neu konstruiert werden musste, da die Maße der neuen Motoren von den Alten abwichen. Aus diesem Grund wurde der Geschützarm der Vorlage \cite{cad_turret_blueprint} als Basis genommen und die Grundidee der Version 1 beibehalten.
 
 \begin{figure}[h]
     \centering
@@ -81,7 +81,7 @@ Für die ersten Funktionstests wurden die Pololu-Motoren provisorisch auf Kork-S
         \includegraphics[width=\textwidth]{images/cad_polulu_front.png}
         \caption{Polulu - Draufsicht}
     \end{subfigure}
-    \hspace{0.05\textwidth} % Adjust this value as needed
+    \hspace{0.05\textwidth}
     \begin{subfigure}[b]{0.25\textwidth}
         \centering
         \includegraphics[width=\textwidth]{images/cad_polulu_back.png}
@@ -92,4 +92,4 @@ Für die ersten Funktionstests wurden die Pololu-Motoren provisorisch auf Kork-S
     \label{fig:pololu_mounting}
 \end{figure}
 
-Für die finale Abnahme wurde daher ein dauerhaftes und sicheres Montagesystem umgesetzt, das ein sauberes und zuverlässiges Setup gewährleistet. Wie in Abbildung~\ref{fig:pololu_mounting} zu sehen, kann die Halterung direkt auf der Montageplatte des Fahrzeugs geklippt werden.
+Für die finale Abnahme wurde daher ein dauerhaftes und sicheres Montagesystem umgesetzt, das ein sauberes und zuverlässiges Setup gewährleistet. Die Maße bzw. Position der Löcher wurden dabei manuell mit Geodreieck vermessen. Wie in Abbildung~\ref{fig:pololu_mounting} zu sehen, kann die Halterung direkt auf der Montageplatte des Fahrzeugs geklippt werden.

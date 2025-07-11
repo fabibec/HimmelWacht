@@ -9,9 +9,11 @@ Wesentlich für den Einstieg in die Motor-Treiber-Programmierung waren die verwe
 
 Im ersten Ansatz wurde der Versuch unternommen, den Low-Level-Treiber (LL-Treiber) direkt mit der Differenzialantriebs-Logik (Differentialantrieb) zu koppeln. Nach intensiver Recherche und ersten Programmieransätzen wurde jedoch deutlich, dass eine klare Trennung beider Ebenen unter modularen Gesichtspunkten vorzuziehen ist. Diese Trennung resultiert in einer signifikanten Steigerung sowohl der Wiederverwendbarkeit als auch der Wartbarkeit des Codes. Abhilfe schafften hierbei vor allem die Verwendung von ESP-IDF-Komponenten.\newline
 
-Um die Ansteuerung der Motoren zu realisieren, war es von zentraler Bedeutung, die Spezifikationen der verwendeten Hardware zu berücksichtigen. Das Datenblatt der Pololu-Motor-Treiber wurde in Form einer Webseite gefunden. Die darin enthaltenen Informationen waren ausreichend, um die Logik zu implementieren. Für die verwendeten Motoren lieferte das Datenblatt insbesondere elektrische Kenngrößen, die für die Absicherung der Hardware von entscheidender Bedeutung waren. Dazu zählten maximale und nominale Ströme. Zu Beginn des Projektes konnte nur auf einen 6V-Akku zurückgegriffen werden, obwohl die Motoren bis zu 12V-Betriebsspannung zulassen. Daraufhin wurden entsprechende Widerstände auf den Treiberboards angebracht, um den maximalen Strom für 6V zu begrenzen. Des Weiteren konnte aus dem Datenblatt des Pololu-Motor-Treibers die Notwendigkeit überdimensionierter Kondensatoren abgeleitet werden, um eine gute und stabile Performance sicherzustellen. \newline
+Um die Ansteuerung der Motoren zu realisieren, war es von zentraler Bedeutung, die Spezifikationen der verwendeten Hardware zu berücksichtigen. Das Datenblatt der Pololu-Motor-Treiber wurde in Form einer Webseite gefunden \cite{pololu_g2_motor_driver}. Die darin enthaltenen Informationen waren ausreichend, um die Logik zu implementieren. \newline
 
-Der Fokus der Implementierung lag vorrangig auf Modularität, Erweiterbarkeit, Clean-Code und Best-Practices. Dafür wurde wenn möglich auf globale Variablen verzichtet und stattdessen auf die Verwendung von Strukturen und Funktionen in Kombination mit Pointern gesetzt.
+Für die verwendeten Motoren lieferte das Datenblatt insbesondere elektrische Kenngrößen, die für die Absicherung der Hardware von entscheidender Bedeutung waren. Dazu zählten maximale und nominale Ströme. Zu Beginn des Projektes konnte nur auf einen 6V-Akku zurückgegriffen werden, obwohl die Motoren bis zu 12V-Betriebsspannung zulassen. Daraufhin wurden entsprechende Widerstände auf den Treiberboards angebracht, um den maximalen Strom für 6V zu begrenzen. Des Weiteren konnte aus dem Datenblatt des Pololu-Motor-Treibers die Notwendigkeit überdimensionierter Kondensatoren abgeleitet werden, um eine gute und stabile Performance sicherzustellen. \cite{mfa_como_drills_919d_series} \newline
+
+Der Fokus der Implementierung lag vorrangig auf Modularität, Erweiterbarkeit, Clean-Code und Best-Practices. Deshalb wurde wenn möglich auf globale Variablen verzichtet und stattdessen auf die Verwendung von Strukturen und Funktionen in Kombination mit Pointern gesetzt.
 
 \subsection{Low-Level Treiber}
 
@@ -22,11 +24,11 @@ Die Aufgabe des LL-Treibers bestand darin, genau einen Motor anzusprechen und zu
     \item Motor Control Pulse Width Modulator (MCPWM)
 \end{itemize}
 
-Wie den Namen zu entnehmen ist, ist LEDC für die einfache Ansteuerung von LEDs gedacht, während MCPWM speziell für Motoren entwickelt wurde. Der MCPWM-Generator besteht aus einer Reihe von Submodulen, wie bspw. einem Fault-Module und einem Brake-Operator. Die Pololu-Boards bieten ebenfalls einen Fault-Pin, weshalb im weiteren Projektverlauf der MCPWM-Generator verwendet wurde, um diese Funktionalität nutzen zu können. \newline
+Wie den Namen zu entnehmen ist, ist LEDC für die einfache Ansteuerung von LEDs gedacht \cite{esp32_ledc}, während MCPWM speziell für Motoren entwickelt wurde \cite{esp32_mcpwm}. Der MCPWM-Generator besteht aus einer Reihe von Submodulen, wie bspw. einem Fault-Module und einem Brake-Operator. Die Pololu-Boards bieten ebenfalls einen Fault-Pin, weshalb im weiteren Projektverlauf der MCPWM-Generator verwendet wurde, um diese Funktionalität nutzen zu können. \newline
 
-Die MCPWM-API umfasst mehrere Funktionen und Strukturen. Deswegen wurde der erste Entwurf auf Basis einer Kombination aus KI-generiertem Code und Beispielcode von Github erstellt. Die grundlegende Funktionalität konnte dadurch unkompliziert und schnell erfasst werden, wodurch Zeit gespart wurde. Nichtsdestotrotz war es notwendig, entsprechende Literatur zur API zu lesen und zu verstehen. Im Folgenden wurde der Code Stück für Stück angepasst, modularisiert und erweitert. \newline
+Die MCPWM-API umfasst mehrere Funktionen und Strukturen. Deswegen wurde der erste Entwurf auf Basis einer Kombination aus KI-generiertem Code und Beispielcode von Github erstellt \cite{esp32_mcpwm_example}. Die grundlegende Funktionalität konnte dadurch unkompliziert und schnell erfasst werden, wodurch Zeit gespart wurde. Nichtsdestotrotz war es notwendig, entsprechende Literatur zur API zu lesen und zu verstehen. Im Folgenden wurde der Code Stück für Stück angepasst, modularisiert und erweitert. \newline
 
-Ein Key-Konzept entstand aus dem Gedanken, was passieren würde, wenn ein Duty-Cycle von beispielsweise 100 \% (Volllast) gesetzt wird und die Drehrichtung des Motors umgekehrt wird. Die Annahme war, dass der Motortreiber + und - umpolen würde und der Motor währenddessen solange als Generator arbeitet, bis die Richtung letztendlich umgekehrt wird. Der dabei möglicherweise auftretende Rückstrom könnte eventuell die Hardware beschädigen. Aus diesem Grund wurde sich auf eine Ramping-Strategie geeinigt, die eine sichere und kontrollierte Änderung der Drehrichtung ermöglicht. Dabei soll sichergestellt werden, dass der Duty-Cycle des PWM-Signals bzw. die Richtung für den Motor nicht abrupt geändert wird. Stattdessen wird der Duty-Cycle in konfigurierbaren Schritten dem Nullbereich angenähert. In einem sicheren Hysteresebereich wird dann die Richtung geändert und der Duty-Cycle der neuen gewünschten Geschwindigkeit angepasst. \newline
+Ein Key-Konzept entstand aus dem Gedanken, was passieren würde, wenn ein Duty-Cycle von beispielsweise 100 \% (Volllast) gesetzt wird und die Drehrichtung des Motors umgekehrt wird. Die Annahme war, dass der Motortreiber + und - umpolen würde und der Motor währenddessen solange als Generator arbeitet, bis die Richtung letztendlich umgekehrt wird. Der dabei möglicherweise auftretende Rückstrom könnte eventuell die Hardware beschädigen. Aus diesem Grund wurde sich auf eine Ramping-Strategie festgelegt, die eine sichere und kontrollierte Änderung der Drehrichtung ermöglicht. Dabei soll sichergestellt werden, dass der Duty-Cycle des PWM-Signals bzw. die Richtung für den Motor nicht abrupt geändert wird. Stattdessen wird der Duty-Cycle in konfigurierbaren Schritten dem Nullbereich angenähert. In einem sicheren Hysteresebereich wird dann die Richtung geändert und der Duty-Cycle der neuen gewünschten Geschwindigkeit angepasst. \newline
 
 Ein weiterer wichtiger Baustein sollte das automatisierte Erkennen von Fehlern der Motoren sein. In solch einem Fall sollte der Motor sofort gestoppt werden und eine Signalleuchte angehen. Ein einfacher Testaufbau bestehend aus Pull-up Widerständen und einer LED sollte die grundlegende Funktionalität des Fault-Pins sicherstellen.
 
@@ -37,7 +39,7 @@ Ein weiterer wichtiger Baustein sollte das automatisierte Erkennen von Fehlern d
     \label{fig:motor_driver_fault_pin}
 \end{figure}
 
-Der Fault-Pin ist laut Datenblatt ein Open-Drain-Ausgang, der bei einem Fehler auf Low gezogen wird. Im Testaufbau wurde ein Pull-Up-Widerstand von 10 k$\Omega$ verwendet, um den Pin im Normalfall auf High zu halten. Folgendes Verhalten wurde erwartet: Bei einem Fehler wird der Pin auf Low gezogen und die LED leuchtet auf. Dies war jedoch nicht der Fall. Stattdessen leuchtete die LED dauerhaft, obwohl der Motor einwandfrei funktionierte. Nach Rücksprache mit dem Betreuer stellte sich heraus, dass dieser Pin in der Vergangenheit nie benutzt wurde. Um den Projektfortschritt nicht unnötig zu gefährden, wurde beschlossen, den Fault-Pin nicht weiter zu verwenden und mit der Implementierung des Differentialantrieb fortzufahren.
+Der Fault-Pin ist laut Datenblatt ein Open-Drain-Ausgang, der bei einem Fehler auf Low gezogen wird \cite{pololu_g2_motor_driver}. Im Testaufbau wurde ein Pull-Up-Widerstand von 10 k$\Omega$ verwendet, um den Pin im Normalfall auf High zu halten. Folgendes Verhalten wurde erwartet: Bei einem Fehler wird der Pin auf Low gezogen und die LED leuchtet auf. Dies war jedoch nicht der Fall. Stattdessen leuchtete die LED dauerhaft, obwohl der Motor einwandfrei funktionierte. Nach Rücksprache mit dem Betreuer stellte sich heraus, dass dieser Pin in der Vergangenheit nie benutzt wurde. Um den Projektfortschritt nicht unnötig zu gefährden, wurde beschlossen, den Fault-Pin nicht weiter zu verwenden und mit der Implementierung des Differentialantrieb fortzufahren.
 
 \subsection{Testing}
 
@@ -49,7 +51,7 @@ Nach erfolgreicher Validierung der Ergebnisse wurde der Testaufbau an die echte 
 
 \subsection{Differentialantrieb}
 
-Die Grundidee des Differentialantriebs ist aus der Robotik abgeleitet und beschreibt eine Antriebsart, bei der die Bewegung eines Fahrzeugs durch die unterschiedliche Drehgeschwindigkeit der Räder auf beiden Seiten gesteuert wird (cite paper). In diesem Fall sind an jeder Seite des Fahrzeugs zwei Räder angebracht. Die beiden Räder jeder Seite werden von einem Motor angetrieben, der über einen Keilrippenriemen mit den Rädern verbunden ist. Dies hat den Vorteil, dass die Balance des Fahrzeugs verbessert wird und eine höhere Stabilität erreicht wird. Die Konstruktion konnte aus einem Projekt des Vorsemesters übernommen werden. \newline
+Die Grundidee des Differentialantriebs ist aus der Robotik abgeleitet und beschreibt eine Antriebsart, bei der die Bewegung eines Fahrzeugs durch die unterschiedliche Drehgeschwindigkeit der Räder auf beiden Seiten gesteuert wird \cite{design_and_control_for_differential_drive_mobile_robot}. In diesem Fall sind an jeder Seite des Fahrzeugs zwei Räder angebracht. Die beiden Räder jeder Seite werden von einem Motor angetrieben, der über einen Keilrippenriemen mit den Rädern verbunden ist. Dies hat den Vorteil, dass die Balance des Fahrzeugs verbessert wird und eine höhere Stabilität erreicht wird. Die Konstruktion konnte aus einem Projekt des Vorsemesters übernommen werden. \newline
 
 Um ein reibungsloses Fahrerlebnis zu gewährleisten, ist es notwendig, die Geschwindigkeit und Richtung der Motoren individuell steuern zu können. Dies wird durch die Verwendung des zuvor beschriebenen LL-Treibers erreicht. Pro Motor wird ein Handle des LL-Treibers erstellt. \newline
 
@@ -79,6 +81,12 @@ Für das synchrone Fahren und die Drehung im Stand ist es wichtig, dass kleinere
 
 Im Zentrum der Abbildung~\ref{fig:diff_drive_logic} befindet sich die Nullposition. Der Grund dafür wird im Abschnitt \ref{sec:diff_drive_integration} erläutert. Die beiden Kanäle im Bereich $|75|$ in X- bzw. Y-Richtung sind die Hysteresebereiche für die Geschwindigkeit bzw. die Drehung im Stand. Die äußeren Bereiche sind für das Fahren mit Lenkung relevant. Die 70 \% Markierungen symbolisieren dabei die Abgrenzung zwischen sanfter und harter Lenkung.
 
+Nachdem die Logik des Differentialantriebs implementiert war, konnte der Task und die damit verbundenen notwendigen Funktionen erstellt werden. Als Schnittstelle fungiert die Funktion \textit{diff\_drive\_send\_cmd}. Diese verarbeitet die Werte des Controllers in dem sie auf den zuvor beschriebenen Algorithmus zurückgreift. Anschließend sendet sie die berechneten Werte an die Queue des Tasks. Der Task selbst greift periodisch auf die Queue zu und appliziert die Befehle an die Steuerungslogik. Die Frequenz des Tasks wurde für Testingzwecke variabel gehalten, um diese auch später noch adaptieren zu können. Ein wichtiger Bestandteil der Tasklogik besteht darin, dass die Motoren nicht nur beim Erhalt neuer Werte angesteuert werden, sondern auch in regelmäßigen Abständen. Dies ist essenziell, um die eingangs beschriebene Ramping-Strategie konsequent umzusetzen. \newline
+
+Mit dem Kollegen Fabian Becker wurde sich zudem abschließend noch geeinigt, dass mathematische Berechnungen auf dem ESP32 wenn möglich mittels Festkommaarithmetik durchgeführt werden sollen. Die IQMATH-Bibliothek wurde dafür verwendet. Diese ermöglicht es, Gleitkommarechnungen in Festkommaoperationen umzuwandeln \cite{esp32_iqmath}. Dadurch soll die Geschwindigkeit der Berechnungen erhöht, die Speicherauslastung reduziert und die Performance des Codes verbessert werden \cite{esp32_iqmath}. Die Idee wurde aus der Robotik-Vorlesung von Prof. Dr. Metzner entnommen, in der die Vorteile von Festkommaarithmetik im Vergleich zu Gleitkommaarithmetik hervorgehoben werden. \newline
+
+Messbare Unterschiede in der Performance konnten jedoch nicht festgestellt werden. Der Grund dafür könnte sein, dass die Logik des Differentialantriebs mehr auf einfacheren Operationen basiert, die über verschachtelte IF-Anweisungen ausgewertet werden, wodurch diese nicht von der Festkommarithmetik profitiert. Auch eine Ressourcenoptimierung in Hinblick auf den Speicher konnte nicht festgestellt werden. Die Speicherauslastung wies keine Unterschiede auf. Nichtsdestotrotz wurde der Ansatz beibehalten, da es sich um eine Best-Practice im Bereich der Mikrokontroller-Programmierung handelt und die Basis für komplexere Berechnungen bildet. \newline
+
 \subsection{Testing} \label{sec:diff_drive_tests}
 
 Wie beim Testing des Low-Level Treibers, wurde der Code auch hier größtenteils KI-generiert. In der Summe gab es zwei Testszenarien:
@@ -102,17 +110,19 @@ Für den Semi-automatischen Modus ist es von zentraler Bedeutung, dass das Fahrz
 
 \subsection{WiFi-Stack}
 
-Der ESP32 bietet zwei Möglichkeiten, um eine Verbindung zu einem WLAN-Netzwerk herzustellen. Methode 1 nutzt die Hilfefunktion \textit{example\_connect}. Diese arbeitet beim Verbindungsaufbau nach dem Busy-Waiting-Prinzip, denn sie blockt so lange, bis eine Verbindung zum Netzwerk besteht und eine IP-Adresse zugewiesen wurde. Um die Verwendung der Funktion einfach zu gestalten, werden mögliche Fehlerfälle wie beispielsweise ein Timeout nicht ordentlich behandelt. Die Funktion ist somit nur begrenzt einsetzbar und für den produktiven Einsatz nicht geeignet. \newline
+Der ESP32 bietet zwei Möglichkeiten, um eine Verbindung zu einem WLAN-Netzwerk herzustellen \cite{esp32_wifi_getting_started}. \newline
 
-Ein weiterer Nachteil dieser Variante ist, dass das Setzen der Credentials (SSID und Passwort) normalerweise über die Konsole mittels \textit{idf.py menuconfig} erfolgt. Beim Testing fiel auf, dass dies auf dem im Projekt zum Einsatz kommenden ESP32 nicht funktioniert. \newline
+Methode 1 nutzt die Hilfefunktion \textit{example\_connect}. Diese arbeitet beim Verbindungsaufbau nach dem Busy-Waiting-Prinzip, denn sie blockt so lange, bis eine Verbindung zum Netzwerk besteht und eine IP-Adresse zugewiesen wurde. Um die Verwendung der Funktion einfach zu gestalten, werden mögliche Fehlerfälle wie beispielsweise ein Timeout nicht ordentlich behandelt. Die Funktion ist somit nur begrenzt einsetzbar und für den produktiven Einsatz nicht geeignet. \cite{esp32_example_connect} \newline
+
+Ein weiterer Nachteil dieser Variante ist, dass das Setzen der Credentials (SSID und Passwort) normalerweise über die Konsole mittels \textit{idf.py menuconfig} erfolgt \cite{esp32_wifi_getting_started}. Beim Testing fiel auf, dass dies auf dem im Projekt zum Einsatz kommenden ESP32 nicht funktioniert. \newline
 
 Die zweite Methode nutzt die WiFi-API des ESP-IDF. Trotz erhöhter Komplexität bietet dieser Weg eine bessere Fehlerbehandlung und im Allgemeinen ein flexibleres Interface. Aufgrund dessen wurde sich für die zweite Methode entschieden. \newline
 
-Aus dem Developer Portal von Espressif (cite) konnte eine Beispielimplementierung entnommen werden, die die grundlegende Funktionalität des Verbindungsaufbaus demonstriert. Diese wurde als Grundlage für die Implementierung der WiFi-Komponente verwendet. Trotz diverser Möglichkeiten, den WiFi-Stack noch zu optimieren, war die Idee diesen dennoch einfach zu halten. Hauptgrund für diese Entscheidung war, dass der WiFi-Stack und der damit verbundene MQTT-Stack zusätzliche Speicherresourcen benötigen, obwohl der Speicher aufgrund der Vielzahl an implementierten Komponenten bereits begrenzt ist. \newline
+Aus dem Developer Portal von Espressif \cite{esp32_wifi_getting_started} konnte eine Beispielimplementierung entnommen werden, die die grundlegende Funktionalität des Verbindungsaufbaus demonstriert. Diese wurde als Grundlage für die Implementierung der WiFi-Komponente verwendet. Trotz diverser Möglichkeiten, den WiFi-Stack noch zu optimieren, war die Idee diesen dennoch einfach zu halten. Hauptgrund für diese Entscheidung war, dass der WiFi-Stack und der damit verbundene MQTT-Stack zusätzliche Speicherresourcen benötigen, obwohl der Speicher aufgrund der Vielzahl an implementierten Komponenten bereits begrenzt ist. \newline
 
 \subsection{MQTT-Stack}
 
-Bevor mit der Programmierung begonnen werden konnte war es notwendig, sich mit der API des MQTT-Stacks auseinanderzusetzen. Abhilfe schaffte hierbei die Dokumentation des ESP-IDF (cite). Das Framework bietet neben TCP auch eine Reihe verschlüsselter Übertragungswege, wie beispielsweise SSL. Wegen der damit verbundenen erhöhten Komplexität und Einarbeitungszeit wurde sich aber in Absprache mit dem Kollegen Jürgens auf eine MQTT-Kommunikation mittels TCP geeinigt. Neben den Netzwerkeigenschaften und den API-Details enthält die Dokumentation auch Referenzen zu Beispielen in deren Github-Repository. So konnte die grundlegende Funktionalität anhand des Beispielscodes zügig erstellt werden. Das Programm stellt jedoch nur eine einfache Implementierung dar, die zur Orientierung dienen soll und für den Einsatz in größeren Projekten nicht geeignet ist. Deshalb waren weitere Anpassungen notwendig. Dabei wurde auf eine Kombination aus KI-generiertem Code, Beispielcode und eigener Implementierung zurückgegriffen. Die eigene Implementierung stützt sich dabei auf die Erkenntnisse aus der Analyse der Dokumentation. Darüber hinaus wurde großer Wert auf Konformität mit den bereits implementierten Komponenten gelegt. Dies betrifft insbesondere das Abfragen der Geschütz- und Feuersteuerung, das ebenfalls über Queues realisiert wird. \newline
+Bevor mit der Programmierung begonnen werden konnte war es notwendig, sich mit der API des MQTT-Stacks auseinanderzusetzen. Abhilfe schaffte hierbei die Dokumentation des ESP-IDF \cite{esp32_mqtt}. Das Framework bietet neben TCP auch eine Reihe verschlüsselter Übertragungswege, wie beispielsweise TSL. Wegen der damit verbundenen erhöhten Komplexität und Einarbeitungszeit wurde sich aber in Absprache mit dem Kollegen Jürgens auf eine MQTT-Kommunikation mittels TCP geeinigt. Neben den Netzwerkeigenschaften und den API-Details enthält die Dokumentation auch Referenzen zu Beispielen in deren Github-Repository. So konnte die grundlegende Funktionalität anhand des Beispielscodes zügig erstellt werden \cite{esp32_mqtt_example}. Das Programm stellt jedoch nur eine einfache Implementierung dar, die zur Orientierung dienen soll und für den Einsatz in größeren Projekten nicht geeignet ist. Deshalb waren weitere Anpassungen notwendig. Dabei wurde auf eine Kombination aus KI-generiertem Code, Beispielcode und eigener Implementierung zurückgegriffen. Die eigene Implementierung stützt sich dabei auf die Erkenntnisse aus der Analyse der Dokumentation. Darüber hinaus wurde großer Wert auf Konformität mit den bereits implementierten Komponenten gelegt. Dies betrifft insbesondere das Abfragen der Geschütz- und Feuersteuerung, das ebenfalls über Queues realisiert wird. \newline
 
 Für die Verarbeitung der erhaltenen Nachrichten ist das Format der Daten von zentraler Bedeutung. Die Nachrichten werden im JSON-Format gesendet. Dies bietet einen einfachen Weg, um strukturierte Daten mit einem geringen Overhead zu übertragen. Die Nachrichten weisen dabei folgende Struktur auf:
 
@@ -138,7 +148,7 @@ Erste Tests der MQTT-Komponente konnten ohne Fahrzeug durchgeführt werden. Dazu
 
 Die Fahrzeugsteuerung ist eine Abstraktionsebene, die als zentrale Anlaufstelle für Befehle vom Controller dient. Darin ist der Haupttask implementiert, der die Steuerbefehle entgegennimmt und an die entsprechenden Queues weiterleitet. Diese Queues werden dann von den Tasks der jeweiligen Komponenten abgearbeitet. Neben der Geschütz- und der Feuersteuerung ist auch die Ansteuerung der Differentialantrieb Logik eine der zentralen Komponenten. Darüber hinaus ist die Fahrzeugsteuerung auch das Modul, das letztendlich in der Main-Methode mithilfe diverser komponenten-spezifischer Strukturen initialisiert wird. \newline
 
-\subsection{Regelschleife (Becker)}
+\subsection{Regelschleife (Becker)} \label{sec:esp32_control_loop}
 
 Die Grundlage der Fahrzeugsteuerung bildet eine Regelschleife, welche synchron zur Update-Frequenz des DualShock4-Treibers mit 60 Hz ausgeführt wird. 
 Zunächst wird in dieser Schleife gewartet, bis eine Verbindung zum Controller hergestellt wurde.
@@ -215,7 +225,7 @@ Da der Treiber die Position des Triggers als 10-Bit-Wert liefert, wurde ein Thre
 
 \subsection{Differentialantrieb (Specht)} \label{sec:diff_drive_integration}
 
-Die Integration in die bestehende Code-Basis war relativ unkompliziert, da das Abgreifen der Steuerbefehle über den PS4-Treiber einfach handzuhaben ist. Ein Struct enthält alle notwendigen Stick- bzw. Button-Werte, die am Controller gedrückt werden. Problematisch war jedoch der Stick-Drift des linken Sticks, denn dadurch wurde der PS4-Treiber ständig mit Werten versorgt, was zu einer permanenten Anpassung der Geschwindigkeit führte. Die ersten Befehle konnten teilweise noch übermittelt werden, jedoch lief nach kurzer Zeit die Queue über und es kam zu einem Absturz des Programms. \newline
+Die Integration in die bestehende Code-Basis war relativ unkompliziert, da das Abgreifen der Steuerbefehle über den PS4-Treiber einfach handzuhaben ist. Ein Struct enthält alle notwendigen Stick- bzw. Button-Werte, die am Controller gedrückt werden. Problematisch war jedoch der Stick-Drift des linken Sticks, denn dadurch wurde mit jedem Abgreifen der Werte eine Änderung im Task detektiert. Die ersten Befehle konnten teilweise noch übermittelt werden, jedoch lief nach kurzer Zeit die Queue über und es kam zu einem Absturz des Programms. \newline
 
 Die Lösung des Problems bestand darin, den Stick-Drift einzudämmen. Daraufhin wurde durch Ausprobieren am Fahrzeug ein Wert ermittelt, ab dem ein neuer Befehl interpretiert werden sollte. Dieser Wert wurde in der Fahrzeugsteuerung als Deadzone definiert. Wenn der linke Stick des Controllers innerhalb dieser Deadzone bewegt wird, wird die Geschwindigkeit des Fahrzeugs nicht angepasst. Dadurch wird verhindert, dass die Queue überläuft und das Programm abstürzt. \newline
 
@@ -224,3 +234,52 @@ Allerdings wurde infolgedessen festgestellt, dass die Queue im Stand überläuft
 Deshalb wurde, wie im Zentrum der Abbildung~\ref{fig:diff_drive_logic} zu sehen, eine Nullposition definiert. Diese wird beim Auftreten, sprich Nicht-Bewegen des linken Sticks, detektiert. Daraufhin wird ein Stop eingeleitet. Sobald dieser abgearbeitet wurde wird ein Flag gesetzt, das anzeigt, dass die Nullposition bereits abgearbeitet wurde. Somit wird verhindert, dass das Stoppen unnötig wiederholt wird und die Queue überläuft. Sobald der linke Stick wieder bewegt wird, wird das Flag zurückgesetzt und die Geschwindigkeit des Fahrzeugs angepasst. \newline
 
 \subsection{MQTT-Anbindung (Specht)}
+
+Um die MQTT-Komponente in der Fahrzeugsteuerung nutzen zu können, waren Code-seitig nur wenige Anpassungen notwendig. Die Regelschleife, vgl. Abschnitt~\ref{sec:esp32_control_loop}, wurde so erweitert, dass eine Unterscheidung des Modus, wie bereits durch den Kollegen Becker beschrieben, vorgenommen wird. Zu Beginn des Projekts wurde der manuelle Modus priorisiert, weshalb in diesem Integrationsschritt Änderungen im Code vorgenommen mussten, um auch den semi-automatischen Modus vollumfänglich nutzen zu können. \newline
+
+Beim Kompilieren des Codes kam daraufhin eine Meldung, dass die Größe des erzeugten Binarys (1,254,496 bytes) den verfügbaren Speicher (1,048,576 bytes - 1MB) überschreitet. Der erste Eindruck war, dass dies vorrangig auf die Vielzahl an Komponenten zurückzuführen, die im Projekt implementiert wurden, zurückzuführen ist.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/memory_size_before.png}
+    \caption{Speicherauslastung vor der Optimierung}
+    \label{fig:memory_size_before}
+\end{figure}
+
+Die Ausgabe der Speicherauslastung, wie in Abbildung~\ref{fig:memory_size_before} zu sehen, erfolgt über die Anweisung \textit{idf.py size}. Sie zeigt zwar zum einen den Fehler an sich, jedoch auch, dass noch etwas Speicher verfügbar ist. Nach eingehender Analyse konnte damit das Problem isoliert werden. Grund war nicht, dass prinzipiell zu wenig Speicher zur Verfügung stand, sondern dass die Konfiguration der Partitionierung des Flash-Speichers im ESP32 nicht optimal war. Im ESP ist standardmäßig eine Partitionierung mit 1MB Flash-Speicher für das Binary vorgesehen. Diese Partitionierung ist für die meisten Anwendungsfälle ausreichend, jedoch nicht für dieses Projekt. Die Partitionierung kann jedoch über den Befehl \textit{idf.py menuconfig} und dem sich öffnenden Konfigurationsassistenten angepasst werden.
+
+\begin{figure}[H]
+    \centering
+
+    \begin{subfigure}[b]{0.40\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/partition_table_before.png}
+        \caption{Vor Optimierung}
+        \label{fig:partition_table_before}
+    \end{subfigure}
+    \hspace{0.05\textwidth} % Adjust this value as needed
+    \begin{subfigure}[b]{0.40\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/partition_table_after.png}
+        \caption{Nach Optimierung}
+        \label{fig:partition_table_after}
+    \end{subfigure}
+
+    \caption{Partitionierung des Flash-Speichers vor und nach der Optimierung}
+    \label{fig:partition_table}
+\end{figure}
+
+Abbildung \ref{fig:partition_table} zeigt die Partitionierung des Flash-Speichers vor und nach der Optimierung. OTA steht dabei für Over-the-Air Updates. Diese wurden in diesem Projekt nicht berücksichtigt, weshalb kein Speicher dafür reserviert werden musste. \newline
+
+Das Problem konnte letztendlich dadurch behoben werden, dass anstatt der normalen App-Größe nun die \textit{Large}-Variante verwendet wurde. In dieser Konfiguration werden ca. 1,5 MB für die App zur Verfügung gestellt. Die Auslastung des Speichers sah danach identisch wie in Abbildung~\ref{fig:memory_size_before} aus, jedoch wurde der Fehler nicht mehr angezeigt. Insgesamt benötigt die Binary nun 82 \% des verfügbaren Speichers, was für den ESP32 eine akzeptable Auslastung in Anbetracht der implementierten Komponenten darstellt. \newline
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/memory_size_after.png}
+    \caption{Freier Speicher nach der Optimierung}
+    \label{fig:memory_size_after}
+\end{figure}
+
+Die Initialisierung des WiFi-Stacks und des MQTT-Stacks sind in der main-Funktion des Programms implementiert. Dabei wird der WiFi-Stack zuerst initialisiert, um eine Verbindung zum WLAN-Netzwerk herzustellen. Anschließend wird der MQTT-Stack mit allen notwendigen Parametern, wie beispielsweise der IP-Adresse des MQTT-Brokers, geladen. Auch dieser Integrationsschritt wurde durch paralleles Logging in der KOnsole begleitet. Die Verbindungsversuche zum Netzwerk verliefen durchwegs positiv. Ausgenommen von Spitzen der Latenz, die durch die Übertragung der Daten bei mehreren Teilnehmern über das WLAN-Netzwerk verursacht wurden. Sollte es zu einem Verbindungsabbruch kommen, soll in erster Linie versucht werden, die Verbindung automatisch wiederherzustellen. Dies gelang meistens auch, jedoch kam es in seltenen Fällen zu einem Timeout, der nicht automatisch behoben werden konnte. In diesem Fall wurde der ESP32 neu gestartet. \newline
+
+Erste Armbewegungen konnten ohne Fahrzeug durchgeführt werden. Dabei wurde abermals auf \textit{mosquitto} als MQTT-Broker auf dem Arbeitsrechner zurückgegriffen. Zu diesem Zeitpunkt war die Implementierung des Objekttrackings noch nicht abgeschlossen, weshalb die Nachrichten noch manuell gesendet werden mussten. Feste Winkelpositionen konnten nach manueller Anpassung erfolgreich an den Topic \textit{vehicle/control} gesendet werden. Die Fahrzeugsteuerung konnte die Nachrichten korrekt empfangen und die Plattform entsprechend bewegen. Diese Integration ermöglichte nun für den weiteren Verlauf des Projekts, dass zukünftig die KI-Komponente die Plattform steuert. Die konkrete Umsetzung des Objekttrackings wird im Abschnitt~\ref{sec:objekttracking} beschrieben. \newline

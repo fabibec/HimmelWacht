@@ -27,7 +27,7 @@ For the DualShock4 Driver the library Bluepad32 and the BTstack Component is req
     ```
 Now you are able to run the project
 
-## motor-driver
+## Motor-driver
 
 ### Usage of driver board
 

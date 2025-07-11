@@ -1,0 +1,14 @@
+[Unit]
+Description=Python Web Server
+After=mediamtx.service
+Requires=mediamtx.service
+
+[Service]
+WorkingDirectory=/home/hw/Desktop/httpserver
+ExecStart=/usr/bin/python3 daemon.py
+Restart=on-failure
+User=hw
+Group=hw
+
+[Install]
+WantedBy=multi-user.target

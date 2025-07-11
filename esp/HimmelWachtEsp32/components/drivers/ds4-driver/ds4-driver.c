@@ -22,7 +22,6 @@ EventGroupHandle_t ds4_event_group = NULL;
 static QueueHandle_t ds4_output_event_queue = NULL;
 
 static SemaphoreHandle_t ds4_output_event_callback_sem = NULL;
-
 static btstack_context_callback_registration_t output_event_callback_registration;
 
 /*

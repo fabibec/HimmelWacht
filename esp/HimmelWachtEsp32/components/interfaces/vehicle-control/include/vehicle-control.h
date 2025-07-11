@@ -1,3 +1,11 @@
+/**
+ * @file
+ * @brief Vehicle and Platform Control (Central Component)
+ *
+ * This component merge all of the other componenets we created together to able able to control the vehicle with a combination of AI and the Dualshock4 Controller
+ *
+ * @authors Fabian Becker, Michael Specht
+ */
 #ifndef _VEHICLE_CONTROL_H_
 #define _VEHICLE_CONTROL_H_
 #include <esp_err.h>
@@ -12,8 +20,8 @@ typedef struct {
     int8_t deadzone_y; // Y Deadzone for the joystick input
     int8_t core; // Core to run the control on
     int8_t deadzone_drive_update; // Deadzone for the drive update
-} manual_control_config_t;
+} vehicle_control_config_t;
 
-esp_err_t vehicle_control_init(manual_control_config_t* cfg, diff_drive_handle_t *diff_drive);
+esp_err_t vehicle_control_init(vehicle_control_config_t* cfg, diff_drive_handle_t *diff_drive);
 
 #endif // _VEHICLE_CONTROL_H_

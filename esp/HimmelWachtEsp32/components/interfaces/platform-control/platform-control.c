@@ -13,6 +13,7 @@ static int8_t platform_y_left_stop_angle = 0;
 static int8_t platform_x_right_stop_angle = 0;
 static int8_t platform_y_right_stop_angle = 0;
 
+// Constant turning values
 const uint16_t MINUS_NINETY_DEGREES = 125;
 const uint16_t ZERO_DEGREES = 335;
 const uint16_t NINETY_DEGREES = 545;
