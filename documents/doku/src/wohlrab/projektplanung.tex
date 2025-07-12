@@ -1,0 +1,45 @@
+\chapter{Projektplanung}
+
+\section{Definiton (Wohlrab)}
+
+Die anfänglichen Überlegungen zum Projekt beschäftigten sich mit dem grundlegenden Aufbau des Systems.
+Dazu haben wir zunächst alle Funktionen und die dafür benötigten Komponenten zusammengestellt.
+Anschließend haben wir überlegt, wie sich die verschiedenen Komponenten miteinander verbinden lassen und welche von welchen Mikrocontrollern gesteuert werden sollen.
+Dabei hat sich eine Zweiteilung des Systems ergeben: 
+\begin{itemize}
+    \item Wir wollten alle Motoren und Servos mit einem ESP32 verbinden.
+    Dieser sollte außerdem über eine Bluetooth-Verbindung die Steuerbefehle des PlayStation-Controllers entgegennehmen.
+    \item Die gesamte Sensorik des Systems soll über einen Raspberry Pi 5 ausgewertet werden.
+    Er sammelt und kombiniert die Informationen aus den Sensorwerten und verarbeitet sie mithilfe eines KI-Modells.
+    Dabei sollen Ziele über die Kamera erkannt und ihre Position mithilfe der weiteren Sensoren bestimmt werden.
+    Auf dieser Grundlage sollen Steuerungsbefehle für den ESP32 berechnet und an diesen weitergegeben werden.
+    Das Video der Kamera soll zudem über einen Webserver dargestellt werden.
+\end{itemize}
+
+\section{GANTT-Diagram (Wohlrab)}
+
+Zu Beginn wird eine vollständige Auflistung aller für das Projekt relevanten Komponenten erstellt. 
+Aus diesen Komponenten werden die entsprechenden Arbeitspakete abgeleitet.
+Im nächsten Schritt erfolgt eine fundierte Abschätzung des Umfangs der einzelnen Arbeitspakete. 
+Mithilfe dieser Schätzung wird der zeitliche Aufwand für die Bearbeitung jedes Pakets ermittelt.
+Zur besseren Übersichtlichkeit werden die zeitlichen Abhängigkeiten zwischen den Arbeitspaketen dargestellt. 
+Diese Darstellung ermöglicht es, die Reihenfolge der Aufgaben und ihre Zusammenhänge zu visualisieren. 
+Dadurch wird eine effiziente und systematische Arbeitsweise gewährleistet.
+Die Arbeitspakete werden anschließend auf die Gruppenmitglieder verteilt, wobei darauf geachtet wird, dass die Gesamtaufwände innerhalb des Teams ausgewogen sind. 
+Dies trägt dazu bei, die Arbeitslast gerecht zu verteilen und die Effektivität des Teams zu maximieren.
+Zur besseren Differenzierung sind die verschiedenen Arten von Arbeitspaketen im Diagramm farblich gekennzeichnet.
+
+\section{Lastenheft (Wohlrab)}
+
+Das Lastenheft stellt ein zentrales Dokument im Projektmanagement dar, da es die Anforderungen und Ziele des Projekts formell festhält. 
+Es dient der präzisen Definition des Projektumfangs und legt den Rahmen fest, innerhalb dessen das Projekt durchgeführt wird. 
+Durch die detaillierte Beschreibung der zu erfüllenden Anforderungen und Zielsetzungen gibt das Lastenheft eine klare Orientierung und leitet alle nachfolgenden Tätigkeiten ab. 
+Nach Abschluss des Projekts ermöglicht es zudem eine objektive Beurteilung des Projekterfolgs, da es als Grundlage für die Evaluation der erreichten Ergebnisse und der Zielerreichung dient.
+
+\section{Plakat (Wohlrab)}
+
+Das Plakat ist ein zentrales Element der visuellen Kommunikation des Projekts, da es die wesentlichen Inhalte auf ansprechende Weise veranschaulicht. 
+Ziel ist es, das Interesse von Personen zu wecken und ihnen eine schnelle, aber umfassende Übersicht über das Projekt zu vermitteln. 
+Der Fokus liegt dabei auf den Hauptfunktionen des Projekts. 
+Eine vollständige Aufstellung aller Funktionen wird bewusst vermieden, um die Aufmerksamkeit auf die Schlüsselaspekte zu lenken. 
+Das Plakat ist somit ein effektives Kommunikationsmittel, das die wichtigsten Informationen auf klare Weise darstellt.
