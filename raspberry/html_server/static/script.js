@@ -33,7 +33,7 @@ async function initialize() {
 
     // Construct full URLs
     const CONFIG = {
-        WEBRTC_SERVER: `http://${config.RASPBERRY_IP}:${PORTS.WEBRTC}`,
+        WEBRTC_SERVER: `http://${config.RASPBERRY_IP}:${PORTS.WEBRTC}/stream/whep`,
         BBOX_WS_URL: `ws://${config.LAB_PC_IP}:${PORTS.BOUNDING_BOX}`,
         SENSOR_WS_URL: `ws://${config.RASPBERRY_IP}:${PORTS.SENSORS}`,
     };
