@@ -66,7 +66,8 @@ Die Bilder wurden in den Ordnern \texttt{images} und die Annotationen in den Ord
 
 
 \section{Training des Modells (Jürgens)}
-Ultralytics bietet mit der Python-Bibliothek \texttt{ultralytics} eine einfache Möglichkeit, ein YOLO-Modell zu trainieren, zu validieren und zu evaluieren. Vor dem Training wird eine Konfigurationsdatei benötigt, welche die Pfade des Trainingsordners, des Validierungsordners und des Testordner enthält. Neben den Pfaden beinhaltet Sie noch die Anzahl der Klassen und den dazugehörigen Namen. In diesem Fall gibt es nur den Holzflieger als Klasse, welcher zukünftig mit der Bezeichnung 'Plane' gelabelt wird. \newline
+Ultralytics bietet mit der Python-Bibliothek \texttt{ultralytics} eine einfache Möglichkeit, ein YOLO-Modell zu trainieren, zu validieren und zu evaluieren. Vor dem Training wird eine Konfigurationsdatei benötigt, welche die Pfade des Trainingsordners, des Validierungsordners und des Testordner enthält. Neben den Pfaden beinhaltet Sie noch die Anzahl der Klassen und den dazugehörigen Namen. In diesem Fall gibt es nur den Holzflieger als Klasse, welcher zukünftig mit der Bezeichnung 'Plane' gelabelt wird. 
+\\
 
 Das Training erfolgt auf einer Mittelklasse NVIDIA Grafikkarte (RTX 3070) mit 8 GB Grafikkartenspeicher und wurden der offiziellen NVIDIA Produktseite entnommen.\cite{RTX3070Specs} Während des Trainings werden die Trainingsbilder augmentiert, um die Robustheit des Modells zu erhöhen. So werden verschiedene Transformationen auf die Bilder angewendet, wie z.B. Rotation, Skalierung oder Änderung der Helligkeit. Hiermit wird die Varianz der Trainingsbilder künstlich erhöht, was zu einer besseren Performance des Modells führt. \cite{YoloDataAugmentation} Durch das Verwenden von vortrainierten Gewichten wird die Trainingszeit verkürzt und die Performance des Modells verbessert. Diese vortrainierten Gewichte werden vor dem Trainings als \texttt{.pt} Datei heruntergeladen und bereitgestellt und bieten den Ausgangspunkt für das Training. Durch Transferlearning, also dem weitertrainieren eines vortrainierten Modells auf einen neuen Datensatz, kann die Performance des Modells weiter verbessert werden. Zudem wird die benötigte Trainingszeit reduziert. \cite{TransferLearningGlossary}
 
@@ -186,7 +187,7 @@ Die Inferenz des Modells erfolgt entsprechend der Dokumentation von Ultralytics.
 \caption{System- und Zeitanalyse während der Inferenz (RPI5)}
 \label{tab:System- und Zeitanalyse waehrend der Inferenz}
 \end{figure}
-
+\newpage
 
 \subsection{Inferenz des Modells auf dem Laborrechner (Jürgens)}
 Mit dem Plattformwechsel wurde neben der Ausführungsumgebung ebenfalls das verwendete Modell geändert. So wurde das YOLOv8n Modell durch das YOLOv11 Modell ersetzt, welche hinsichtlich der Performance und Genauigkeit eine kleine Verbesserung bietet. Da bei einem Neustart des Laborrechners alle Python Abhängigkeiten neu installiert werden müssen, wurde ein einfaches Batch-Skript erstellt, welches die Installation automatisiert. Hier ist zu beachten, dass Ultralytics standardmäßig eine PyTorch-Version ohne CUDA-Unterstützung installiert. Es ist daher notwendig die mitinstallierten PyTorch-Bibliotheken zu entfernen und anschließend die korrekte Version mit CUDA-Unterstützung zu installieren.
@@ -220,8 +221,6 @@ Durch die Verwendung der dedizierten Grafikkarte wird nun anstelle der CPU die G
 \caption{Vergleich Inferenz ONNX C++ und Python}
 \label{tab:CPU und RAM-Auslastung CPU vs CUDA}
 \end{figure}
-
-\newpage
 
 Der Rückgabewert der Inferenz des Modells beinhaltet unter anderem die Koordinaten der Bounding Box, die Klasse und den Konfidenzwert des erkannten Objekts. Die Konfidenz gibt an, zu wie viel Prozent sich das Modell bei dem erkannten Objekt sicher ist. \cite{InferenzResults} 
 
