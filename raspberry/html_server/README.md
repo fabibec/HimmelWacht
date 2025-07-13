@@ -16,7 +16,7 @@ All network parameters (e.g., IP address of the Lab PC, port numbers) can be con
 Example `.env`:
 
 ```env
-LAB_PC_IP=172.16.9.13
+LAB_PC_IP=172.16.3.105
 HTTP_PORT=8000
 WEBSOCKET_PORT=8765
 ```
