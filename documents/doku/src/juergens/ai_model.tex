@@ -9,19 +9,19 @@ Besonders interessant sind die Open-Source Implementierungen der YOLOv8 und YOLO
 Die YOLOv8 und YOLOv11 Modelle von Ultralytics werden in verschiedenen Größen angeboten. Mit steigender Größe des Modells steigt zwar die Genauigkeit des Modells, aber auch die Inferenzzeit und der Speicherbedarf.
 Die Modelle werden in folgenden Größen angeboten:
 \begin{itemize}
-    \item YOLOv8/11n - Nano 
-    \item YOLOv8/11s - Small
-    \item YOLOv8/11m - Medium
-    \item YOLOv8/11l - Large
-    \item YOLOv8/11x - Extra Large
+  \item YOLOv8/11n - Nano 
+  \item YOLOv8/11s - Small
+  \item YOLOv8/11m - Medium
+  \item YOLOv8/11l - Large
+  \item YOLOv8/11x - Extra Large
 \end{itemize}
 Die Modellauswahl ist durch die Hardware des Raspberry Pi 5 begrenzt. So sind insbesondere die mittleren und großen Modelle aufgrund der hohen Inferenzzeiten nicht für die Ausführung auf der CPU des Raspberry Pi 5 geeignet. Bereits das YOLOv8m Modell hat eine Inferenzzeit von 234,7 ms. \cite{ultralyticsYOLOv8Performance} Anhand dessen wurde entschieden, dass eine Beschränkung auf die kleineren Modelle YOLOv8n, YOLOv8s, YOLO11n und YOLO11s sinnvoll ist. Diese Modelle haben eine geringere Inferenzzeit und könnten somit besser für die Ausführung auf dem Raspberry Pi 5 geeignet sein. 
 Die folgenden Leistungsmetriken stammen aus der offiziellen Online-Dokumentation von Ultralytics [\cite{yolov8_ultralytics,ultralyticsYOLOv8Performance,yolo11_ultralytics}]:
 \begin{itemize}
-    \item YOLOv8n $\approx$ 80.4 ms
-    \item YOLOv8s $\approx$ 128.4 ms
-    \item YOLO11n $\approx$ 56.1 ms 
-    \item YOLO11s $\approx$ 90.0 ms 
+  \item YOLOv8n $\approx$ 80.4 ms
+  \item YOLOv8s $\approx$ 128.4 ms
+  \item YOLO11n $\approx$ 56.1 ms 
+  \item YOLO11s $\approx$ 90.0 ms 
 \end{itemize}
 
 Anhand dieser Werte und persönlicher Erfahrungen wurde zunächst entschieden, dass das YOLOv8n Modell im ONNX-Format verwendet wird. Dieses Modell hat mit einer Inferenzzeit von 80,4 ms eine vertretbare Geschwindigkeit.
@@ -39,8 +39,8 @@ Um eine robuste Objekterkennung unabhängig von der räumlichen Orientierung des
 Für das überwachte Lernverfahren sind neben den Bilddaten entsprechende Annotationen erforderlich. Der Annotationsprozess erfordert die manuelle Markierung der zu erkennenden Objekte in einem geeigneten Tool sowie deren Konvertierung in ein kompatibles Format. Dieser arbeitsintensive Prozess ist von entscheidender Bedeutung, da die Qualität der Annotationen direkt die Modellperformanz beeinflusst. Vor Beginn des Annotationsprozesses muss zunächst die Art der Annotierung definiert werden.
 Für diese Arbeit gab es zwei Arten der Annotation, die in Betracht gezogen wurden:
 \begin{itemize}
-    \item Bounding Box: Ein Rechteck wird um das zu erkennende Objekt gezeichnet. Diese Methode ist einfach und schnell, aber weniger präzise.
-    \item Polygon: Eine komplexere Form wird um das Objekt gezeichnet. Diese Methode ist genauer, aber auch zeitaufwändiger.
+  \item Bounding Box: Ein Rechteck wird um das zu erkennende Objekt gezeichnet. Diese Methode ist einfach und schnell, aber weniger präzise.
+  \item Polygon: Eine komplexere Form wird um das Objekt gezeichnet. Diese Methode ist genauer, aber auch zeitaufwändiger.
 \end{itemize}
 Die Entscheidung fiel auf die zeitaufwändigere Polygon-Annotation. Diese ermöglicht eine genauere Erkennung des Holzfliegers weil nicht nur die äußeren Kanten sondern auch die komplexere Form des Objekts berücksichtigt wird. 
 Neben der speziellen Form des Holzfliegers war diese Entscheidung auch durch die relativ geringe Anzahl vorhandener Trainingsbilder begründet. 
@@ -77,36 +77,36 @@ So kann man sagen, dass ein hoher \texttt{mAP50}-Wert und \texttt{mAP50-95}-Wert
 
 
 \begin{figure}[h]
+\centering
+\begin{subfigure}[b]{0.45\textwidth}
   \centering
-  \begin{subfigure}[b]{0.45\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolov8n.png}
-    \caption{YOLOv8n}
-    \label{fig:Trainingsresultate yolov8n}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.45\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolov8s.png}
-    \caption{YOLOv8s}
-    \label{fig:Trainingsresultate yolov8s}
-  \end{subfigure}
-  \vskip\baselineskip
-  \begin{subfigure}[b]{0.45\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolo11n.png}
-    \caption{YOLO11n}
-    \label{fig:Trainingsresultate yolo11n}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.45\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolo11s.png}
-    \caption{YOLO11s}
-    \label{fig:Trainingsresultate yolo11s}
-  \end{subfigure}
-  \caption{Vergleich Trainingsresultate YOLOv8n, YOLOv8s, YOLO11n und YOLO11s}
-  \label{tab:Vergleich Trainingsresultate}
+  \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolov8n.png}
+  \caption{YOLOv8n}
+  \label{fig:Trainingsresultate yolov8n}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.45\textwidth}
+  \centering
+  \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolov8s.png}
+  \caption{YOLOv8s}
+  \label{fig:Trainingsresultate yolov8s}
+\end{subfigure}
+\vskip\baselineskip
+\begin{subfigure}[b]{0.45\textwidth}
+  \centering
+  \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolo11n.png}
+  \caption{YOLO11n}
+  \label{fig:Trainingsresultate yolo11n}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.45\textwidth}
+  \centering
+  \includegraphics[width=0.9\textwidth]{images/Trainingsresults_yolo11s.png}
+  \caption{YOLO11s}
+  \label{fig:Trainingsresultate yolo11s}
+\end{subfigure}
+\caption{Vergleich Trainingsresultate YOLOv8n, YOLOv8s, YOLO11n und YOLO11s}
+\label{tab:Vergleich Trainingsresultate}
 \end{figure}
 
 
@@ -120,32 +120,32 @@ Um das Modell schließlich auch als ONNX-Modell zu betreiben muss dieses zunäch
 Um generell ein KI-Modell im ONNX-Format auszuführen, sind einige Voraussetzung an das System zu erfüllen. Es werden verschieden Programme und Bibliotheken benötigt, um das Modell auszuführen. Um schnelle Ergebnisse und erstes Feedback zu erhalten wie die Inferenz des Modells im ONNX-Format abläuft wurde zunächst eine Laufzeitumgebung auf dem persönlichen Computer eingerichtet. Folgende Bibliotheken und Programme waren auf jeden Fall notwendig, um das Modell auszuführen:
 
 \begin{itemize}
-    \item ONNX Runtime v1.21.0
-    \item OpenCV (mit GStreamer Unterstützung)
-    \item CUDA 12.6 (optional, für GPU-Beschleunigung)
-    \item cuDNN 9.9 (NVIDIA Deep Neural Network library, NVIDIA Developer Account erforderlich)
+  \item ONNX Runtime v1.21.0
+  \item OpenCV (mit GStreamer Unterstützung)
+  \item CUDA 12.6 (optional, für GPU-Beschleunigung, NVCC Compiler erforderlich)
+  \item cuDNN 9.9 (NVIDIA Deep Neural Network library, NVIDIA Developer Account erforderlich)
 \end{itemize}
 
 \newpage
 Zwischen diesen Komponenten gibt es Abhängigkeiten speziell in der Versionierung. So muss beispielsweise die CUDA-Version zur eingesetzten Grafikkarte und die cuDNN-Version zur CUDA-Version passen. \\ Um den Anforderungen einer minimalen Laufzeit pro Inferenz gerecht zu werden, war die Zielprogrammiersprache C++ und nicht Python. Aufgrund fehlender Erfahrungen mit KI-Modellen im ONNX-Format wurde die Erstellung eines ersten Prototypen mit Hilfe von ChatGPT und der ONNX-Dokumentation gelöst. Es stellte sich heraus, dass die Ergebnisse der Inferenz im ONNX-Format mangelhaft sind, wobei man eine fehlerhafte Implementierung im C/C++ Code nicht ausschließen kann. Im Vergleich zu den Ergebnissen der Inferenz mit der von Ultralytics bereitgestellten Python-Bibliothek kann man die Ergebnisse der Inferenz des C/C++ Prototypen nicht verwenden. Um ein vergleichbares Ergbnis zu produzieren, werden beide Inferenzen mit dem selben Video getestet. Das Video wurde direkt mit dem Raspberry Pi 5 und dem Camera Module 3 aufgenommen.
 
 \begin{figure}[h]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \begin{subfigure}[b]{0.48\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth,height=5.9cm,keepaspectratio]{images/ONNX_Inferenz.png}
-    \caption{Inferenz im ONNX-Format mit C++ Prototypen}
-    \label{fig:Screenshot: Inferenz im ONNX-Format mit C++ Prototypen}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.48\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth,height=6.2cm,keepaspectratio]{images/Python_Inferenz.png}
-    \caption{Inferenz in Python mit Ultralytics}
-    \label{fig:Screenshot: Inferenz Python mit Ultralytics}
-  \end{subfigure}
-  \caption{Vergleich Inferenz ONNX C++ und Python}
-  \label{tab:Vergleich Inferenz ONNX C++ und Python}
+  \includegraphics[width=0.9\textwidth,height=5.9cm,keepaspectratio]{images/ONNX_Inferenz.png}
+  \caption{Inferenz im ONNX-Format mit C++ Prototypen}
+  \label{fig:Screenshot: Inferenz im ONNX-Format mit C++ Prototypen}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \centering
+  \includegraphics[width=0.9\textwidth,height=6.2cm,keepaspectratio]{images/Python_Inferenz.png}
+  \caption{Inferenz in Python mit Ultralytics}
+  \label{fig:Screenshot: Inferenz Python mit Ultralytics}
+\end{subfigure}
+\caption{Vergleich Inferenz ONNX C++ und Python}
+\label{tab:Vergleich Inferenz ONNX C++ und Python}
 \end{figure}
 
 Wie in \ref{tab:Vergleich Inferenz ONNX C++ und Python} zu sehen ist, sind die Ergebnisse der Inferenz in Python mit der Ultralytics-Bibliothek deutlich besser.
@@ -169,55 +169,56 @@ Diese Pipeline überträgt den Kamera-Stream an OpenCV mit einer Latenz von etwa
 Die Inferenz des Modells erfolgt entsprechend der Dokumentation von Ultralytics. Diese wird in einer Endlosschleife durchgeführt und verarbeitet den Kamera-Stream Bild für Bild. Trotz der relativ guten Hardware des Raspberry Pi 5 (im Vergleich zu älteren Raspberry Pi Systemen) ist die Inferenzzeit und damit Nutzbarkeit dieses Ansatz sehr eingeschränkt. So konnte sehr markantes Ruckeln bei der Anzeige des Kamera-Streams festgestellt werden. Die Ausführung wirkt sich dabei besonders auf die CPU-Last aus. Wie in \ref{fig:CPU und RAM-Auslastung Inferenz RPI5} dargestellt wurde die CPU vom Raspberry Pi 5 teilweise über 90\% ausgelastet. Dieses Verhalten spiegelt sich bei der Performance der KI-Auswertung wieder. So hatte das System trotz der Nutzung des kleinstmöglichen Modells einen sehr geringen Durchsatz (siehe \ref{fig:Zeitanalyse der Inferenz (RPI5)}, grüne Linie). Die Berechnung durch das KI-Modell wurde nach Abstimmung mit Herrn Altmann und dem Team auf einen Laborrechner mit dedizierter Grafikkarte ausgelagert.
 
 \begin{figure}[h]
+\centering
+\begin{subfigure}[b]{\textwidth}
   \centering
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=5.9cm,keepaspectratio]{images/System_Load_During_Yolo_Inference.png}
-    \caption{Systemauslastung während der Inferenz (RPI5)}
-    \label{fig:CPU und RAM-Auslastung Inferenz RPI5}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=\textwidth,height=6.2cm,keepaspectratio]{images/YOLO_Inference_Timing_Analysis.png}
-    \caption{Zeitanalyse der Inferenz (RPI5)}
-    \label{fig:Zeitanalyse der Inferenz (RPI5)}
-  \end{subfigure}
-  \caption{System- und Zeitanalyse während der Inferenz (RPI5)}
-  \label{tab:System- und Zeitanalyse waehrend der Inferenz}
+  \includegraphics[width=\textwidth,height=5.9cm,keepaspectratio]{images/System_Load_During_Yolo_Inference.png}
+  \caption{Systemauslastung während der Inferenz (RPI5)}
+  \label{fig:CPU und RAM-Auslastung Inferenz RPI5}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=\textwidth,height=6.2cm,keepaspectratio]{images/YOLO_Inference_Timing_Analysis.png}
+  \caption{Zeitanalyse der Inferenz (RPI5)}
+  \label{fig:Zeitanalyse der Inferenz (RPI5)}
+\end{subfigure}
+\caption{System- und Zeitanalyse während der Inferenz (RPI5)}
+\label{tab:System- und Zeitanalyse waehrend der Inferenz}
 \end{figure}
 
 
 \subsection{Inferenz des Modells auf dem Laborrechner (Jürgens)}
-Mit dem Plattformwechsel wurde neben der Ausführungsumgebung ebenfalls das verwendete Modell geändert. So wurde das YOLOv8n Modell durch das YOLOv11 Modell ersetzt, welche hinsichtlich der Performance und Genauigkeit eine kleine Verbesserung bietet.
-Die Inferenz des Modells auf dem Laborrechner erfolgt ebenfalls mit der Ultralytics Python-Bibliothek. Anders als auf dem RPI5 läuft die Berechnung des Modells auf der dedizierten Grafikkarte des Laborrechners. Hierbei handelt es sich um eine NVIDIA T1000 Grafikkarte welche die Nutzung von CUDA ermöglicht. Um dieses auch aktiv zu verwenden muss der \texttt{NVIDIA Cuda Compiler Driver} und PyTorch mit CUDA-Unterstützung installiert sein. Die Inferenzzeit des Modells auf dem Laborrechner fällt mit etwa 8 ms deutlich geringer aus und bietet eine flüssigere Anzeige des annotierten Kamera-Streams (siehe \ref{fig:Timing Zusammenfassung CUDA vs RPI5}). 
+Mit dem Plattformwechsel wurde neben der Ausführungsumgebung ebenfalls das verwendete Modell geändert. So wurde das YOLOv8n Modell durch das YOLOv11 Modell ersetzt, welche hinsichtlich der Performance und Genauigkeit eine kleine Verbesserung bietet. Da bei einem Neustart des Laborrechners alle Python Abhängigkeiten neu installiert werden müssen, wurde ein einfaches Batch-Skript erstellt, welches die Installation automatisiert. Hier ist zu beachten, dass Ultralytics standardmäßig eine PyTorch-Version ohne CUDA-Unterstützung installiert. Es ist daher notwendig die mitinstallierten PyTorch-Bibliotheken zu entfernen und anschließend die korrekte Version mit CUDA-Unterstützung zu installieren.
+\\
+Die Inferenz des Modells auf dem Laborrechner erfolgt also ebenfalls mit der Ultralytics Python-Bibliothek. Anders als auf dem RPI5 läuft die Berechnung des Modells auf der dedizierten Grafikkarte des Laborrechners. Hierbei handelt es sich um eine NVIDIA T1000 Grafikkarte welche die Nutzung von CUDA ermöglicht. Die Inferenzzeit des Modells auf dem Laborrechner fällt mit etwa 8 ms deutlich geringer aus und bietet eine flüssigere Anzeige des annotierten Kamera-Streams (siehe \ref{fig:Timing Zusammenfassung CUDA vs RPI5}). 
 \begin{figure}[h]
-  \centering
-  \includegraphics[scale=0.5]{images/Timing_summary.png}
-  \caption{Timing Zusammenfassung CUDA vs RPI5}
-  \label{fig:Timing Zusammenfassung CUDA vs RPI5}
+\centering
+\includegraphics[scale=0.5]{images/Timing_summary.png}
+\caption{Timing Zusammenfassung CUDA vs RPI5}
+\label{fig:Timing Zusammenfassung CUDA vs RPI5}
 \end{figure}
 \newpage
 
-Durch die Verwendung der dedizierten Grafikkarte wird nun anstelle der CPU die GPU für die Inferenz verwendet. Dies führt zu einer deutlich geringeren Belastung der CPU des Systems (siehe \ref{tab:CPU und RAM-Auslastung CPU vs CUDA})
+Durch die Verwendung der dedizierten Grafikkarte wird nun anstelle der CPU die GPU für die Inferenz verwendet. Dies führt zu einer deutlich geringeren Belastung der CPU des Systems (siehe \ref{tab:CPU und RAM-Auslastung CPU vs CUDA}).
 
 \begin{figure}[h!]
+\centering
+\begin{subfigure}[b]{\textwidth}
   \centering
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth,height=5.9cm,keepaspectratio]{images/system_load_plot_CPU_Laborrechner.png}
-    \caption{Systemauslastung Laborrechner ohne CUDA}
-    \label{fig:CPU und RAM-Auslastung ohne CUDA}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth,height=6.2cm,keepaspectratio]{images/system_load_plot_CUDA.png}
-    \caption{Systemauslastung Laborrechner mit CUDA}
-    \label{fig:CPU und RAM-Auslastung mit CUDA}
-  \end{subfigure}
-  \caption{Vergleich Inferenz ONNX C++ und Python}
-  \label{tab:CPU und RAM-Auslastung CPU vs CUDA}
+  \includegraphics[width=0.9\textwidth,height=5.9cm,keepaspectratio]{images/system_load_plot_CPU_Laborrechner.png}
+  \caption{Systemauslastung Laborrechner ohne CUDA}
+  \label{fig:CPU und RAM-Auslastung ohne CUDA}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{\textwidth}
+  \centering
+  \includegraphics[width=0.9\textwidth,height=6.2cm,keepaspectratio]{images/system_load_plot_CUDA.png}
+  \caption{Systemauslastung Laborrechner mit CUDA}
+  \label{fig:CPU und RAM-Auslastung mit CUDA}
+\end{subfigure}
+\caption{Vergleich Inferenz ONNX C++ und Python}
+\label{tab:CPU und RAM-Auslastung CPU vs CUDA}
 \end{figure}
 
 \newpage
