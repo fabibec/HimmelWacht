@@ -25,7 +25,7 @@ Durch diese bidirektionale Kommunikation kann sichergestellt werden, dass sowohl
 Um mit einem Sensor über die I²C-Schnittstelle zu kommunizieren, muss zunächst dessen spezifische I²C-Adresse bekannt sein. 
 Diese ist in der Regel im Datenblatt des Sensors dokumentiert. 
 Alternativ kann die Adresse mit dem Kommandozeilen-Tool „i2cdetect” ermittelt werden. 
-Dieses listet die am I²C-Bus angeschlossenen Geräte und deren Adressen auf.
+Dieses listet die am I²C-Bus angeschlossenen Geräte und deren Adressen aus.
 Zur Verbesserung der Lesbarkeit und Flexibilität des Quellcodes werden die I²C-Adressen der Sensoren mittels Define-Anweisungen im Code festgelegt. 
 Dies ermöglicht eine einfache Anpassung bei Änderungen der Sensoradressen.
 Die Kommunikation beginnt mit dem Öffnen des entsprechenden I²C-Kanals und dem Aufbau einer Verbindung zum Sensor über dessen Adresse. 

@@ -3,11 +3,11 @@
 \section{Definiton (Wohlrab)}
 
 Die anfänglichen Überlegungen zum Projekt beschäftigten sich mit dem grundlegenden Aufbau des Systems.
-Dazu haben wir zunächst alle Funktionen und die dafür benötigten Komponenten zusammengestellt.
-Anschließend haben wir überlegt, wie sich die verschiedenen Komponenten miteinander verbinden lassen und welche von welchen Mikrocontrollern gesteuert werden sollen.
+Dazu wurden zunächst alle Funktionen und die dafür benötigten Komponenten zusammengestellt.
+Anschließend wurde überlegt, wie sich die verschiedenen Komponenten miteinander verbinden lassen und welche von welchen Mikrocontrollern gesteuert werden sollen.
 Dabei hat sich eine Zweiteilung des Systems ergeben: 
 \begin{itemize}
-    \item Wir wollten alle Motoren und Servos mit einem ESP32 verbinden.
+    \item Alle Motoren und Servos sollen mit einem ESP32 verbunden werden.
     Dieser sollte außerdem über eine Bluetooth-Verbindung die Steuerbefehle des PlayStation-Controllers entgegennehmen.
     \item Die gesamte Sensorik des Systems soll über einen Raspberry Pi 5 ausgewertet werden.
     Er sammelt und kombiniert die Informationen aus den Sensorwerten und verarbeitet sie mithilfe eines KI-Modells.

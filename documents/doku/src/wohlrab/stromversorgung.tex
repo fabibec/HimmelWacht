@@ -1,16 +1,16 @@
 \section{Versorgung des Raspberry Pi über den 5V Stromkreis (Wohlrab)}
 
 Während der Entwicklung wurde der Raspberry Pi stets separat von der Plattform betrieben und über das Raspberry Pi Netzteil mit Strom versorgt.
-Da sich unser System frei bewegen können soll, ist es notwendig, dass der Raspberry Pi auch über eine portable Stromquelle betrieben werden kann.
-Der einfachste Ansatz war, den Raspberry Pi an den 5V Verteiler anzuschließen, der bereits auf unserem System installiert wurde.
+Da sich das System frei bewegen können soll, ist es notwendig, dass der Raspberry Pi auch über eine portable Stromquelle betrieben werden kann.
+Der einfachste Ansatz ist, den Raspberry Pi an den 5V Verteiler anzuschließen, der bereits auf dem System installiert ist.
 Dazu können die entsprechenden GPIO-Pins des Raspberry Pi mit den Ports des Verteilers verbunden werden. 
 Hierbei ist darauf zu achten, dass ausreichend dicke Kabel verwendet werden, da der Raspberry Pi bei hoher Auslastung einiges an Strom benötigt. 
 Zudem ist der Raspberry Pi ziemlich empfindlich, was die Stabilität des Stroms betrifft. 
-Deshalb haben wir, um die Stabilität zu erhöhen, beide 5V Pins und zwei der GND Pins des Raspberry Pi mit dem Stromverteiler verbunden.
+Um die Stabilität zu erhöhen, wurden beide 5V Pins und zwei der GND Pins des Raspberry Pi mit dem Stromverteiler verbunden.
 Beim Testen hat diese Lösung zunächst auch zuverlässig funktioniert. 
-Dabei wurden jedoch keine Applikationen auf dem Raspberry Pi ausgeführt und der Roboter wurde nur in einfacher Fahrt bewegt. 
+Während der Tests wurden jedoch keine Applikationen auf dem Raspberry Pi ausgeführt und der Roboter wurde nur in einfacher Fahrt bewegt. 
 Während der weiteren Entwicklung ist der Raspberry Pi jedoch hin und wieder abgestürzt, wenn auf ihm die Auswertung der Kameradaten lief und parallel die Funktionsfähigkeit des Roboters ausgiebig getestet wurde.
 Dabei hat sich herausgestellt, dass der erhöhte Stromverbrauch des Raspberry Pi beim Ausführen unserer Applikationen nicht stabil gewährleistet werden kann, wenn alle anderen Funktionen des Roboters ebenso ausgeführt werden, also Fahren, Bewegen des Geschützes und Schießen gleichzeitig. 
 In diesem Volllast-Test konnte die benötigte Spannung nicht aufrechterhalten werden.
-Um eine wirklich stabile Stromversorgung für den Raspberry Pi gewährleisten zu können, versorgen wir ihn nun mit einer separaten Powerbank. 
+Um eine wirklich stabile Stromversorgung für den Raspberry Pi gewährleisten zu können, wird der Raspberry Pi nun mit einer separaten Powerbank versorgt. 
 Diese wird im unteren Teil des Roboters im selben Fach mitgeführt in dem auch schon der andere Akku Platz findet und über ein Standard-USB-Kabel mit dem Raspberry Pi verbunden.
