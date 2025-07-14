@@ -3,7 +3,7 @@
 \section{Funktion und Anforderung des Webservers (Koch)}
 Der Webserver des Projekts sollte die zentrale Schnittstelle zwischen verschiedenen Sensoren werden und sowohl Videomaterial mit bereits verarbeiteten KI-Informationen darstellen können und wissenswerte Daten wie die Entfernung des Fliegers oder die Geschützneigung anzeigen.
 Als zentrales Problem stand dabei das Videomaterial mit entsprechenden Bounding Boxes anzuzeigen im Vordergrund, da bereits über das ganze Projekt hinweg die KI die leistungsintensivste Aufgabe war und entsprechende Latenzprobleme bereits auf das Minimum verringert wurden.
-Der Grundlegende Aufbau der KI-Verarbeitung mitsamt der Videoausgabe ist in Kapitel \ref{JENDIRK} erklärt.
+Der Grundlegende Aufbau der KI-Verarbeitung mitsamt der Videoausgabe ist in Kapitel \ref{sec:ai_model} erklärt.
 
 \section{Lösungsansatz und Umsetzung (Koch)}
 Ein Lösungsansatz diesbezüglich war deshalb, dass die Sensordaten vom Raspberry Pi per MQTT an den PC geschickt werden, welcher die KI-Verarbeitung übernimmt, um die Daten direkt im Videostream abzubilden.
@@ -16,13 +16,23 @@ Das Problem hierbei war jedoch, dass somit zwar der Videostream und die Sensorda
 Es musste also eine Lösung gefunden werden, den verarbeiteten Videostream mit den Bounding Boxes vom PC zum Raspberry Pi zu übertragen, doch das senden des Videostreams ist nicht ohne Verluste möglich, wie bereits erwähnt wurde.
 
 Die Umsetzung erfolgte über einen zentralen Knotenpunkt auf dem Raspberry Pi, welcher sowohl die Bereitstellung der Benutzeroberfläche als auch die Echtzeitkommunikation mit den Sensoren und der externen KI-Komponente zur Objekterkennung übernimmt. Die Kommunikation erfolgt über WebSockets, wobei sowohl Sensordaten als auch Bounding-Box-Koordinaten empfangen, verarbeitet und an das Frontend weitergeleitet werden. Die Darstellung im Browser kombiniert dabei Livevideo, Sensordaten und erkannte Objekte in einem einheitlichen Interface. 
-Dabei wird die Entfernung nur in Kombination mit der Bounding Box ausgegeben wie in Abbildung \ref{fig:webserver} zu sehen.
+Dabei wird die Entfernung nur in Kombination mit der Bounding Box ausgegeben wie in Abbildung \ref{fig:webserver} zu sehen. Der finale Architekturplan ist in Abbildung \ref{fig:webserver_architektur} zu sehen.
+
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{images/Architekturaufbau_webserver.png}
+        \caption{Architekturaufbau des Webservers mit entsprechenden Kommunikationskanälen}
+        \label{fig:webserver_architektur}
+    \end{center}
+\end{figure}
 
 Während der Entwicklung zeigte sich, dass die zunächst gewählte Architektur zur Sensoranbindung zu erheblichen Verzögerungen bei der Ausgabe der Gyrosensordaten führte. Die ersten Problemvermutungen bezogen sich dabei auf einen Konflikt mit der gleichzeitigen Nutzung desselben I²C Busses des Raspberry Pi's, was allerdings schnell durch unabhängige Tests ausgeschlossen werden konnte, indem man die Binaries des Ultraschallsensors und des Gyrosensors in zwei verschiedenen Terminals ausführen lies und es dort zu keiner sichtbaren Verzögerung kam.
 Die zweite Vermutung beruhte auf dem Verdacht, dass sich die schreibenden Befehle gegenseitig blockierten oder zumindest in diesem Fall der Ultraschallsensor den Vorrang erhält, jedoch konnte auch dies unter Verwendung eines Mutex für die Ausgabe ausgeschlossen werden.
 Als tatsächliche Ursache stellte sich heraus, dass die ursprüngliche Implementierung versuchte, mittels einer Python-Funktion asynchron auf neue Sensornachrichten zu warten. In der Praxis wurden die Nachrichten jedoch nicht parallel, sondern nacheinander verarbeitet: Eine neue Nachricht konnte erst dann bearbeitet werden, wenn die vorherige vollständig abgearbeitet war. Da der Gyrosensor in den ersten Sekunden nach dem Start noch seine Offsets berechnet und dadurch verzögert Daten liefert, beginnt der Ultraschallsensor frühzeitig mit der Datenübertragung. 
 Aufgrund seiner niedrigeren Abtastrate blockierte dessen Verarbeitung jedoch den Zugriff auf die Gyroskopdaten, welche erst nach Abschluss des Ultraschall-Zyklus gelesen werden konnten. So wurde der Gyrosensor dauerhaft ausgebremst, was zu verzögerten und gepufferten Messwerten führte \cite{webserver_python_anext}.
 Um dieses Problem zu beheben, wurde die Architektur angepasst und die Sensorverarbeitung parallelisiert. Statt beide Generatoren sequentiell abzufragen, wurden zwei Tasks erstellt, die jeweils eigenständig mit ihrem Sensor kommunizieren. Dadurch können beide Datenströme unabhängig voneinander verarbeitet und weitergeleitet werden, was die Reaktionszeit des Systems verbesserte und die gleichzeitige Darstellung der Sensorinformationen im Frontend ermöglichte.
+
+Abschließend wurde noch der auf dem Raspberry Pi laufende MediaMTX-Server und Webserver per Systemd-Services in den Autostart gelegt, um so eine reibungslose Nutzung gewährleisten zu können. Erste Bedenken deswegen waren, dass der Gyrosensor aufgrund von Offset-Berechnungen zu Beginn möglichst in der Ausgangsposition sein sollte, da sonst Messfehler entstehen könnten. Nach Tests war das Ganze jedoch kein Problem, da bei etwa gleichzeitigem Anschluss des ESPs und des Raspberry Pi's, der ESP immer um etwa $30s$ schneller war und beim Startup immer in die Ausgangsposition geht.
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.8\textwidth]{images/Webserver.png}

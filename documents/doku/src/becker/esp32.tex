@@ -34,6 +34,7 @@ Beim Anschalten des Controllers wird versucht, Kontakt zu dieser Adresse aufzuba
 Unter normalen Betriebsbedingungen wäre dies die Adresse der PlayStation4 Konsole. 
 Für unser Projekt wurde jedoch die gespeicherte MAC-Adresse mit der des ESP-32 überschrieben.
 Nach dem Einschalten unternimmt das Gamepad dann sofort den Versuch, sich mit dem Mikrocontroller zu verbinden.
+Das zum Überschreiben der MAC-Adresse verwendete Programm ist im Order \texttt{esp/ds4-mac-change} zu finden.
 
 Die Übertragung der Daten zwischen Gamepad und Mikrocontroller erfolgt mittels sogenannter HID-Reports.
 HID-Reports sind binäre Datenstrukturen, welche die Reihenfolge der Informationen festlegen.
